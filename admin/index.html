@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Business Portal — RENVOA CLINIC</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="page-body admin-body">
+  <div id="adminLogin" class="admin-login">
+    <div class="admin-login-card">
+      <p class="admin-login-eyebrow">RENVOA CLINIC</p>
+      <h1>Business Portal</h1>
+      <p class="admin-login-sub">Orders, clients, finance, and goals — team access only.</p>
+      <form id="loginForm">
+        <label class="form-field">
+          <span>Access code</span>
+          <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Enter team password">
+        </label>
+        <p class="admin-login-error" id="loginError" hidden>Incorrect access code. Try <strong>renvoa2026</strong>.</p>
+        <p class="admin-login-error" id="loginSystemError" hidden></p>
+        <button type="submit" class="btn-primary btn-full" id="loginBtn">Unlock</button>
+      </form>
+      <a href="../index.html" class="admin-back-link">← Back to store</a>
+    </div>
+  </div>
+
+  <div id="adminApp" class="admin-app" hidden>
+    <header class="admin-topbar">
+      <div class="admin-topbar-left">
+        <a href="../index.html" class="admin-brand">RENVOA CLINIC</a>
+        <span class="admin-topbar-badge">Business</span>
+      </div>
+      <div class="admin-topbar-right">
+        <span class="admin-live-dot"></span>
+        <span class="admin-topbar-meta" id="adminMeta"></span>
+        <button type="button" class="admin-logout" id="logoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <div class="admin-shell">
+      <nav class="admin-nav" id="adminNav">
+        <button type="button" class="admin-nav-item active" data-view="overview">Overview</button>
+        <button type="button" class="admin-nav-item" data-view="orders">Orders <span class="admin-nav-badge" id="newOrdersBadge"></span></button>
+        <button type="button" class="admin-nav-item" data-view="pipeline">Pipeline</button>
+        <button type="button" class="admin-nav-item" data-view="crm">CRM <span class="admin-nav-badge admin-nav-badge-warn" id="crmTasksBadge"></span></button>
+        <button type="button" class="admin-nav-item" data-view="messages">Messages</button>
+        <button type="button" class="admin-nav-item" data-view="finance">Finance &amp; P&amp;L</button>
+        <button type="button" class="admin-nav-item" data-view="goals">Goals</button>
+      </nav>
+
+      <main class="admin-main" id="adminMain"></main>
+    </div>
+  </div>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/products.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/admin-data.js"></script>
+  <script src="../js/admin-app.js"></script>
+</body>
+</html>

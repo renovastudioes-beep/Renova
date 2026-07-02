@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Research Peptide — RENVOA CLINIC</title>
+  <meta name="description" content="Pharmaceutical-grade research peptides. HPLC verified. Research use only.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="canonical" id="canonicalLink" href="">
+</head>
+<body>
+  <p style="text-align:center;padding:40px;font-family:system-ui">Loading product…</p>
+  <script src="js/config.js"></script>
+  <script src="js/products.js"></script>
+  <script>
+    const id = new URLSearchParams(location.search).get('p') || new URLSearchParams(location.search).get('id');
+    if (id && PRODUCTS[id]) {
+      const p = PRODUCTS[id];
+      document.title = `${p.name} — RENVOA CLINIC`;
+      document.querySelector('meta[name="description"]').content =
+        `${p.tagline}. ${p.purity} purity. HPLC verified. Research use only.`;
+      document.getElementById('canonicalLink').href = location.origin + location.pathname + '?p=' + id;
+      location.replace('index.html?product=' + id);
+    } else {
+      location.replace('index.html');
+    }
+  </script>
+</body>
+</html>

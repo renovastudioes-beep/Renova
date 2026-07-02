@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wholesale Inquiry — RENVOA CLINIC</title>
+  <meta name="description" content="Bulk and wholesale research peptide inquiries for laboratories and institutions.">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="page-body">
+  <nav class="global-nav scrolled">
+    <div class="nav-content">
+      <a href="index.html" class="nav-logo">RENVOA CLINIC</a>
+      <a href="index.html#peptides" class="link-cta">Store</a>
+    </div>
+  </nav>
+  <main class="page-main">
+    <h1>Wholesale &amp; Bulk Orders</h1>
+    <p class="page-sub">Volume pricing for laboratories ordering 50+ vials. Typical response within 1 business day.</p>
+    <form class="wholesale-form" id="wholesaleForm">
+      <label class="form-field"><span>Institution / Company *</span><input type="text" required id="wCompany"></label>
+      <label class="form-field"><span>Contact Name *</span><input type="text" required id="wName"></label>
+      <label class="form-field"><span>Email *</span><input type="email" required id="wEmail"></label>
+      <label class="form-field"><span>Phone</span><input type="tel" id="wPhone"></label>
+      <label class="form-field"><span>Compounds &amp; Quantities *</span><textarea required id="wProducts" rows="4" placeholder="e.g. BPC-157 5mg × 100 vials, TB-500 5mg × 50 vials"></textarea></label>
+      <label class="form-field"><span>Additional Notes</span><textarea id="wNotes" rows="3"></textarea></label>
+      <label class="check-label"><input type="checkbox" required> I confirm wholesale purchase is for laboratory research use only.</label>
+      <button type="submit" class="btn-primary btn-full">Submit Inquiry</button>
+    </form>
+    <div id="wholesaleSuccess" class="form-success" hidden>
+      <h2>Inquiry received.</h2>
+      <p>Our team will respond within 1 business day at the email provided.</p>
+      <a href="index.html" class="link-cta">Back to store ›</a>
+    </div>
+  </main>
+  <script>
+    document.getElementById('wholesaleForm').onsubmit = (e) => {
+      e.preventDefault();
+      const data = {
+        company: wCompany.value, name: wName.value, email: wEmail.value,
+        phone: wPhone.value, products: wProducts.value, notes: wNotes.value,
+        date: new Date().toISOString(),
+      };
+      const inquiries = JSON.parse(localStorage.getItem('renvoa-wholesale') || '[]');
+      inquiries.push(data);
+      localStorage.setItem('renvoa-wholesale', JSON.stringify(inquiries));
+      wholesaleForm.hidden = true;
+      wholesaleSuccess.hidden = false;
+    };
+  </script>
+</body>
+</html>

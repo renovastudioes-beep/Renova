@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmed — RENVOA CLINIC</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="page-body">
+  <nav class="global-nav scrolled"><div class="nav-content"><a href="index.html" class="nav-logo">RENVOA CLINIC</a></div></nav>
+  <main class="page-main confirm-page">
+    <div class="confirm-icon">✓</div>
+    <h1>Order confirmed.</h1>
+    <p class="confirm-id">Order <strong id="orderId">—</strong></p>
+    <p id="confirmMsg">Thank you. A confirmation email will be sent with your COA documents and tracking once your order ships.</p>
+    <p class="confirm-note">Orders placed before 2 PM EST ship same business day via cold-chain packaging.</p>
+    <div class="confirm-actions">
+      <a href="coa.html" class="btn-primary">COA Lookup</a>
+      <a href="index.html" class="btn-secondary">Continue Shopping</a>
+    </div>
+  </main>
+  <script>
+    const order = JSON.parse(localStorage.getItem('renvoa-last-order') || 'null');
+    const params = new URLSearchParams(location.search);
+    document.getElementById('orderId').textContent = params.get('id') || order?.id || '—';
+    if (order?.customer?.email) {
+      document.getElementById('confirmMsg').textContent =
+        `Confirmation sent to ${order.customer.email}. COA documents and tracking will follow when your order ships.`;
+    }
+  </script>
+</body>
+</html>

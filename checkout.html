@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout — RENVOA CLINIC</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="page-body">
+  <nav class="global-nav scrolled">
+    <div class="nav-content">
+      <a href="index.html" class="nav-logo">RENVOA CLINIC</a>
+      <a href="index.html" class="link-cta">← Back to Store</a>
+    </div>
+  </nav>
+
+  <main class="page-main checkout-page">
+    <h1>Checkout</h1>
+    <p class="page-sub">Research qualification required for all orders.</p>
+
+    <div id="checkoutEmpty" class="checkout-empty" hidden>
+      <p>Your bag is empty.</p>
+      <a href="index.html#peptides" class="btn-primary">Browse Peptides</a>
+    </div>
+
+    <div class="checkout-layout" id="checkoutWrap" hidden>
+      <form class="checkout-form" id="checkoutForm">
+        <section class="checkout-section">
+          <h2>Research Qualification</h2>
+          <p class="checkout-note">All purchasers must confirm qualified research use.</p>
+          <label class="check-label"><input type="checkbox" id="ruoAck" required> I confirm these products are for <strong>in-vitro laboratory research only</strong>.</label>
+          <label class="check-label"><input type="checkbox" id="ageAck" required> I am 18+ and a qualified researcher or represent a licensed research institution.</label>
+        </section>
+
+        <section class="checkout-section">
+          <h2>Contact</h2>
+          <label class="form-field"><span>Full Name *</span><input type="text" id="fullName" required></label>
+          <label class="form-field"><span>Email *</span><input type="email" id="email" required></label>
+          <label class="form-field"><span>Phone</span><input type="tel" id="phone"></label>
+        </section>
+
+        <section class="checkout-section">
+          <h2>Shipping Address</h2>
+          <label class="form-field"><span>Address *</span><input type="text" id="address1" required></label>
+          <label class="form-field"><span>Apt / Suite</span><input type="text" id="address2"></label>
+          <div class="form-row">
+            <label class="form-field"><span>City *</span><input type="text" id="city" required></label>
+            <label class="form-field"><span>State *</span><input type="text" id="state" required></label>
+            <label class="form-field"><span>ZIP *</span><input type="text" id="zip" required></label>
+          </div>
+        </section>
+
+        <section class="checkout-section">
+          <h2>Add-Ons</h2>
+          <label class="check-label addon-label">
+            <input type="checkbox" id="bacAddon">
+            <span><strong>Bacteriostatic Water 30mL</strong> — $12.00<br><small>Sterile reconstitution solution. Recommended for lyophilized peptides.</small></span>
+          </label>
+        </section>
+
+        <p class="legal-check">By placing your order you agree to our <a href="legal/research-agreement.html">Research Agreement</a>, <a href="legal/terms.html">Terms of Sale</a>, and <a href="legal/privacy.html">Privacy Policy</a>.</p>
+        <button type="submit" class="btn-primary btn-full" id="placeOrderBtn">Place Order</button>
+      </form>
+
+      <aside class="checkout-summary">
+        <h2>Order Summary</h2>
+        <div id="checkoutItems"></div>
+        <div class="checkout-totals">
+          <div class="checkout-line"><span>Subtotal</span><span id="sumSubtotal">$0.00</span></div>
+          <div class="checkout-line"><span>Cold-chain shipping</span><span id="sumShipping">$0.00</span></div>
+          <p class="shipping-note" id="shippingNote"></p>
+          <div class="checkout-line checkout-total"><span>Total</span><span id="sumTotal">$0.00</span></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/admin-data.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/checkout.js"></script>
+</body>
+</html>

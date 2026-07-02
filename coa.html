@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COA Lookup — RENVOA CLINIC</title>
+  <meta name="description" content="Look up Certificates of Analysis by batch number for RENVOA CLINIC research peptides.">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="page-body">
+  <nav class="global-nav scrolled">
+    <div class="nav-content">
+      <a href="index.html" class="nav-logo">RENVOA CLINIC</a>
+      <a href="index.html#quality" class="link-cta">Testing Protocol</a>
+    </div>
+  </nav>
+  <main class="page-main coa-page">
+    <h1>COA Lookup</h1>
+    <p class="page-sub">Enter your batch number to view Certificate of Analysis results. Printed on every vial label and packing slip.</p>
+    <div class="coa-search">
+      <input type="text" id="batchInput" placeholder="e.g. RC-BPC26-0412" autocomplete="off">
+      <button type="button" class="btn-primary" id="coaSearchBtn">Look Up</button>
+    </div>
+    <div id="coaResult" class="coa-result" hidden></div>
+    <div class="coa-hint">
+      <h3>Current batch numbers</h3>
+      <ul id="coaBatchList"></ul>
+    </div>
+  </main>
+  <script src="js/coa-data.js"></script>
+  <script>
+    const input = document.getElementById('batchInput');
+    const result = document.getElementById('coaResult');
+    const list = document.getElementById('coaBatchList');
+
+    Object.keys(COA_DATABASE).forEach((batch) => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'coa-batch-link';
+      btn.textContent = batch;
+      btn.onclick = () => { input.value = batch; lookup(); };
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+
+    function lookup() {
+      const key = input.value.trim().toUpperCase();
+      const data = COA_DATABASE[key] || COA_DATABASE[input.value.trim()];
+      if (!data) {
+        result.hidden = false;
+        result.innerHTML = '<p class="coa-error">Batch not found. Check the number on your vial label or contact support@renvoaclinic.com.</p>';
+        return;
+      }
+      result.hidden = false;
+      result.innerHTML = `
+        <div class="coa-result-card">
+          <div class="coa-result-header"><span>Certificate of Analysis</span><span class="coa-pass">${data.status}</span></div>
+          <div class="coa-result-body">
+            <div class="coa-row"><span>Batch</span><span>${key}</span></div>
+            <div class="coa-row"><span>Product</span><span>${data.product} (${data.size})</span></div>
+            <div class="coa-row"><span>Test Date</span><span>${data.date}</span></div>
+            <div class="coa-row"><span>Purity (HPLC)</span><span class="coa-value">${data.purity}</span></div>
+            <div class="coa-row"><span>Identity (MS)</span><span class="coa-value">${data.identity}</span></div>
+            <div class="coa-row"><span>Endotoxins</span><span class="coa-value">${data.endotoxin}</span></div>
+            <div class="coa-row"><span>Water Content</span><span class="coa-value">${data.water}</span></div>
+          </div>
+          <p class="coa-result-note">For research use only. Full chromatogram PDF available upon request.</p>
+        </div>`;
+    }
+
+    document.getElementById('coaSearchBtn').onclick = lookup;
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') lookup(); });
+    if (new URLSearchParams(location.search).get('batch')) {
+      input.value = new URLSearchParams(location.search).get('batch');
+      lookup();
+    }
+  </script>
+</body>
+</html>

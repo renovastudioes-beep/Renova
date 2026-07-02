@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RENVOA CLINIC — Research Peptides</title>
+  <meta name="description" content="Pharmaceutical-grade research peptides. Third-party tested. COA included. For laboratory research use only.">
+  <meta property="og:title" content="RENVOA CLINIC — Research Peptides">
+  <meta property="og:description" content="HPLC verified research peptides. Cold-chain shipping. COA on every order.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"Store","name":"RENVOA CLINIC","description":"Research-grade peptides for laboratory use","url":"https://renvoaclinic.com"}
+  </script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧬</text></svg>">
+</head>
+<body>
+  <!-- Global Nav -->
+  <nav class="global-nav" id="globalNav">
+    <div class="nav-content">
+      <a href="index.html" class="nav-logo" aria-label="RENVOA CLINIC Home">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        RENVOA CLINIC
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Store</a></li>
+        <li><a href="#goals">Shop by Goal</a></li>
+        <li><a href="#peptides">Peptides</a></li>
+        <li><a href="#quality">Quality</a></li>
+        <li><a href="#research">Research</a></li>
+        <li><a href="#support">Support</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="nav-icon-btn" id="searchBtn" aria-label="Search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+        </button>
+        <button class="nav-icon-btn cart-btn" id="cartBtn" aria-label="Shopping bag">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
+          <span class="cart-count" id="cartCount">0</span>
+        </button>
+        <button class="nav-hamburger" id="navHamburger" aria-label="Menu">
+          <span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Search Overlay -->
+  <div class="search-overlay" id="searchOverlay">
+    <div class="search-container">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="search" id="searchInput" placeholder="Search peptides" autocomplete="off">
+      <button class="search-close" id="searchClose" aria-label="Close search">&times;</button>
+    </div>
+    <div class="search-results" id="searchResults"></div>
+  </div>
+
+  <!-- Hero (rotating) -->
+  <section class="hero" id="hero">
+    <div class="hero-content reveal">
+      <p class="hero-eyebrow" id="heroEyebrow">Featured</p>
+      <h1 class="hero-title" id="heroTitle">BPC-157.<br>Precision redefined.</h1>
+      <p class="hero-subtitle" id="heroSub">≥99% purity. HPLC verified. Lyophilized for maximum stability.<br>For in-vitro laboratory research only.</p>
+      <div class="hero-ctas">
+        <a href="#" class="link-cta" id="heroLearn" data-detail="bpc-157">Learn more <span class="chevron">›</span></a>
+        <a href="#" class="link-cta" id="heroBuy" data-add="bpc-157">Buy from $49 <span class="chevron">›</span></a>
+      </div>
+      <div class="hero-dots">
+        <button type="button" class="hero-dot active" aria-label="Slide 1"></button>
+        <button type="button" class="hero-dot" aria-label="Slide 2"></button>
+        <button type="button" class="hero-dot" aria-label="Slide 3"></button>
+      </div>
+    </div>
+    <div class="hero-visual reveal">
+      <div class="vial-scene">
+        <div class="vial-glow"></div>
+        <div class="vial">
+          <div class="vial-cap"></div>
+          <div class="vial-body">
+            <div class="vial-label" id="heroVialLabel">BPC-157</div>
+            <div class="vial-liquid"></div>
+          </div>
+        </div>
+        <div class="molecule-ring"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust Bar -->
+  <section class="trust-bar">
+    <div class="trust-bar-inner">
+      <div class="trust-item"><span class="trust-icon">✓</span> HPLC Tested ≥99%</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> COA Every Order</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> Cold-Chain Shipping</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> Same-Day Dispatch</div>
+    </div>
+  </section>
+
+  <!-- Promo Ribbon -->
+  <section class="promo-ribbon">
+    <div class="promo-inner reveal">
+      <p class="promo-text">Free cold-chain shipping over $150 · $9.95 flat rate below. <a href="#peptides" class="link-cta inline">Shop now <span class="chevron">›</span></a></p>
+    </div>
+  </section>
+
+  <!-- What Are You Looking For -->
+  <section class="goal-finder-section" id="goals">
+    <div class="section-header reveal">
+      <h2>What are you looking for?</h2>
+      <p>Find the right peptides for your research area.</p>
+    </div>
+    <div class="goal-grid reveal" id="goalGrid">
+      <button class="goal-card" data-goal="weight-loss" type="button">
+        <span class="goal-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v18M8 7h8M7 12h10M8 17h8"/></svg>
+        </span>
+        <span class="goal-label">Weight Loss</span>
+        <span class="goal-sub">Metabolic &amp; GLP-1</span>
+      </button>
+      <button class="goal-card" data-goal="tissue-repair" type="button">
+        <span class="goal-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2z"/><path d="M12 8v4l3 2"/></svg>
+        </span>
+        <span class="goal-label">Tissue Repair</span>
+        <span class="goal-sub">Recovery &amp; healing</span>
+      </button>
+      <button class="goal-card" data-goal="growth-hormone" type="button">
+        <span class="goal-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </span>
+        <span class="goal-label">Growth Hormone</span>
+        <span class="goal-sub">GH axis research</span>
+      </button>
+      <button class="goal-card" data-goal="anti-aging" type="button">
+        <span class="goal-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </span>
+        <span class="goal-label">Anti-Aging</span>
+        <span class="goal-sub">Longevity research</span>
+      </button>
+      <button class="goal-card" data-goal="skin-research" type="button">
+        <span class="goal-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </span>
+        <span class="goal-label">Skin &amp; Beauty</span>
+        <span class="goal-sub">Cosmetic research</span>
+      </button>
+      <button class="goal-card" data-goal="metabolic" type="button">
+        <span class="goal-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </span>
+        <span class="goal-label">Metabolic Health</span>
+        <span class="goal-sub">Endocrine pathways</span>
+      </button>
+    </div>
+    <div class="goal-overlay" id="goalOverlay" aria-hidden="true">
+      <div class="goal-overlay-backdrop" id="goalOverlayBackdrop"></div>
+      <div class="goal-overlay-panel" id="goalOverlayPanel">
+        <div class="goal-overlay-header">
+          <div>
+            <p class="goal-overlay-eyebrow" id="goalOverlayEyebrow">Recommended for</p>
+            <h3 class="goal-overlay-title" id="goalOverlayTitle"></h3>
+          </div>
+          <button class="goal-overlay-close" id="goalOverlayClose" type="button" aria-label="Close">&times;</button>
+        </div>
+        <div class="goal-overlay-tiles" id="goalOverlayTiles"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Products Grid (Apple-style product tiles) -->
+  <section class="product-grid-section" id="peptides">
+    <div class="section-header reveal">
+      <h2>The lineup.</h2>
+      <p>Pharmaceutical-grade peptides for serious research.</p>
+    </div>
+    <div class="filter-bar" id="filterBar" hidden>
+      <span class="filter-label" id="filterLabel">Showing: Weight Loss</span>
+      <button class="filter-clear" id="filterClear" type="button">Show all peptides</button>
+    </div>
+    <div class="product-grid" id="productGrid">
+      <article class="product-tile tile-dark reveal" data-product="tb-500" data-categories="tissue-repair">
+        <div class="tile-content">
+          <span class="tile-badge">Popular</span>
+          <h3>TB-500</h3>
+          <p class="tile-tagline">Thymosin Beta-4 fragment.<br>5mg lyophilized.</p>
+          <p class="tile-price">From $65</p>
+          <div class="tile-ctas">
+            <a href="#" class="link-cta light" data-add="tb-500">Buy <span class="chevron">›</span></a>
+            <a href="#" class="link-cta light" data-detail="tb-500">Learn more <span class="chevron">›</span></a>
+          </div>
+        </div>
+        <div class="tile-visual vial-tb"></div>
+      </article>
+
+      <article class="product-tile tile-light reveal" data-product="bpc-157" data-categories="tissue-repair skin-research">
+        <div class="tile-content">
+          <h3>BPC-157</h3>
+          <p class="tile-tagline">Body Protection Compound.<br>5mg &amp; 10mg options.</p>
+          <p class="tile-price">From $49</p>
+          <div class="tile-ctas">
+            <a href="#" class="link-cta" data-add="bpc-157">Buy <span class="chevron">›</span></a>
+            <a href="#" class="link-cta" data-detail="bpc-157">Learn more <span class="chevron">›</span></a>
+          </div>
+        </div>
+        <div class="tile-visual vial-bpc"></div>
+      </article>
+
+      <article class="product-tile tile-gradient reveal" data-product="semaglutide" data-categories="weight-loss metabolic">
+        <div class="tile-content">
+          <span class="tile-badge">New</span>
+          <h3>Semaglutide</h3>
+          <p class="tile-tagline">GLP-1 receptor agonist.<br>Research-grade 2mg.</p>
+          <p class="tile-price">From $89</p>
+          <div class="tile-ctas">
+            <a href="#" class="link-cta light" data-add="semaglutide">Buy <span class="chevron">›</span></a>
+            <a href="#" class="link-cta light" data-detail="semaglutide">Learn more <span class="chevron">›</span></a>
+          </div>
+        </div>
+        <div class="tile-visual vial-sema"></div>
+      </article>
+
+      <article class="product-tile tile-light reveal" data-product="ipamorelin" data-categories="growth-hormone anti-aging metabolic">
+        <div class="tile-content">
+          <h3>Ipamorelin</h3>
+          <p class="tile-tagline">Selective GH secretagogue.<br>2mg per vial.</p>
+          <p class="tile-price">From $39</p>
+          <div class="tile-ctas">
+            <a href="#" class="link-cta" data-add="ipamorelin">Buy <span class="chevron">›</span></a>
+            <a href="#" class="link-cta" data-detail="ipamorelin">Learn more <span class="chevron">›</span></a>
+          </div>
+        </div>
+        <div class="tile-visual vial-ipa"></div>
+      </article>
+
+      <article class="product-tile tile-dark reveal" data-product="cjc-1295" data-categories="growth-hormone anti-aging">
+        <div class="tile-content">
+          <h3>CJC-1295</h3>
+          <p class="tile-tagline">GHRH analog, no DAC.<br>2mg lyophilized.</p>
+          <p class="tile-price">From $45</p>
+          <div class="tile-ctas">
+            <a href="#" class="link-cta light" data-add="cjc-1295">Buy <span class="chevron">›</span></a>
+            <a href="#" class="link-cta light" data-detail="cjc-1295">Learn more <span class="chevron">›</span></a>
+          </div>
+        </div>
+        <div class="tile-visual vial-cjc"></div>
+      </article>
+
+      <article class="product-tile tile-accent reveal" data-product="ghk-cu" data-categories="anti-aging skin-research">
+        <div class="tile-content">
+          <h3>GHK-Cu</h3>
+          <p class="tile-tagline">Copper peptide complex.<br>50mg per vial.</p>
+          <p class="tile-price">From $35</p>
+          <div class="tile-ctas">
+            <a href="#" class="link-cta light" data-add="ghk-cu">Buy <span class="chevron">›</span></a>
+            <a href="#" class="link-cta light" data-detail="ghk-cu">Learn more <span class="chevron">›</span></a>
+          </div>
+        </div>
+        <div class="tile-visual vial-ghk"></div>
+      </article>
+
+      <article class="product-tile tile-gradient reveal" data-product="recovery-stack" data-categories="tissue-repair">
+        <div class="tile-content">
+          <span class="tile-badge">Save $15</span>
+          <h3>Recovery Stack</h3>
+          <p class="tile-tagline">BPC-157 5mg + TB-500 5mg.<br>Recovery bundle.</p>
+          <p class="tile-price">$99</p>
+          <div class="tile-ctas">
+            <a href="#" class="link-cta light" data-add="recovery-stack">Buy <span class="chevron">›</span></a>
+            <a href="#" class="link-cta light" data-detail="recovery-stack">Learn more <span class="chevron">›</span></a>
+          </div>
+        </div>
+        <div class="tile-visual vial-bpc"></div>
+      </article>
+
+      <article class="product-tile tile-accent reveal" data-product="gh-stack" data-categories="growth-hormone anti-aging">
+        <div class="tile-content">
+          <span class="tile-badge">Bundle</span>
+          <h3>GH Research Stack</h3>
+          <p class="tile-tagline">Ipamorelin + CJC-1295.<br>GH axis pairing.</p>
+          <p class="tile-price">$72</p>
+          <div class="tile-ctas">
+            <a href="#" class="link-cta light" data-add="gh-stack">Buy <span class="chevron">›</span></a>
+            <a href="#" class="link-cta light" data-detail="gh-stack">Learn more <span class="chevron">›</span></a>
+          </div>
+        </div>
+        <div class="tile-visual vial-ipa"></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Full-width Feature Section -->
+  <section class="feature-hero" id="quality">
+    <div class="feature-hero-content reveal">
+      <h2>Purity you can<br>measure.</h2>
+      <p class="feature-subtitle">Every batch independently verified by third-party HPLC and mass spectrometry. Certificates of Analysis included with every order.</p>
+      <a href="coa.html" class="link-cta">Look up your COA <span class="chevron">›</span></a>
+    </div>
+    <div class="feature-hero-visual reveal">
+      <div class="coa-card">
+        <div class="coa-header">
+          <span>Certificate of Analysis</span>
+          <span class="coa-pass">PASS</span>
+        </div>
+        <div class="coa-body">
+          <div class="coa-row"><span>Purity (HPLC)</span><span class="coa-value">99.7%</span></div>
+          <div class="coa-row"><span>Identity (MS)</span><span class="coa-value">Confirmed</span></div>
+          <div class="coa-row"><span>Endotoxins</span><span class="coa-value">&lt;0.1 EU/mg</span></div>
+          <div class="coa-row"><span>Water Content</span><span class="coa-value">&lt;2%</span></div>
+          <div class="coa-bar">
+            <div class="coa-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bento Feature Grid -->
+  <section class="bento-section" id="research">
+    <div class="section-header reveal">
+      <h2>Built for research.</h2>
+      <p>Everything your lab needs. Nothing it doesn't.</p>
+    </div>
+    <div class="bento-grid">
+      <div class="bento-card bento-large reveal">
+        <div class="bento-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+        </div>
+        <h3>Cold-chain shipping.</h3>
+        <p>Temperature-controlled packaging with phase-change panels. Your peptides arrive stable, every time.</p>
+        <div class="bento-visual cold-chain"></div>
+      </div>
+      <div class="bento-card reveal">
+        <div class="bento-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/>
+          </svg>
+        </div>
+        <h3>COA included.</h3>
+        <p>Batch-specific certificates with HPLC chromatograms.</p>
+      </div>
+      <div class="bento-card reveal">
+        <div class="bento-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+          </svg>
+        </div>
+        <h3>Lyophilized.</h3>
+        <p>Superior stability. Reconstitute when ready.</p>
+      </div>
+      <div class="bento-card bento-wide reveal">
+        <div class="bento-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <h3>cGMP manufacturing.</h3>
+        <p>Produced in ISO 9001 certified facilities with full traceability from synthesis to shipment.</p>
+      </div>
+      <div class="bento-card reveal">
+        <div class="bento-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+          </svg>
+        </div>
+        <h3>Same-day dispatch.</h3>
+        <p>Orders before 2 PM ship same business day.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison Section -->
+  <section class="compare-section">
+    <div class="section-header reveal">
+      <h2>Compare peptides.</h2>
+      <p>Find the right compound for your research.</p>
+    </div>
+    <div class="compare-table-wrapper reveal">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>BPC-157</th>
+            <th>TB-500</th>
+            <th>Semaglutide</th>
+            <th>Ipamorelin</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Purity</td>
+            <td>≥99%</td>
+            <td>≥99%</td>
+            <td>≥98%</td>
+            <td>≥99%</td>
+          </tr>
+          <tr>
+            <td>Form</td>
+            <td>Lyophilized</td>
+            <td>Lyophilized</td>
+            <td>Lyophilized</td>
+            <td>Lyophilized</td>
+          </tr>
+          <tr>
+            <td>Size</td>
+            <td>5mg / 10mg</td>
+            <td>5mg</td>
+            <td>2mg</td>
+            <td>2mg</td>
+          </tr>
+          <tr>
+            <td>Price</td>
+            <td>From $49</td>
+            <td>From $65</td>
+            <td>From $89</td>
+            <td>From $39</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td><a href="#" class="link-cta small" data-add="bpc-157">Buy</a></td>
+            <td><a href="#" class="link-cta small" data-add="tb-500">Buy</a></td>
+            <td><a href="#" class="link-cta small" data-add="semaglutide">Buy</a></td>
+            <td><a href="#" class="link-cta small" data-add="ipamorelin">Buy</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq-section" id="support">
+    <div class="section-header reveal">
+      <h2>Questions? Answers.</h2>
+    </div>
+    <div class="faq-list">
+      <details class="faq-item reveal">
+        <summary>Are these peptides for human consumption?</summary>
+        <p>No. All RENVOA CLINIC products are sold strictly for in-vitro laboratory research purposes. They are not intended for human or animal consumption, diagnosis, treatment, or prevention of any disease.</p>
+      </details>
+      <details class="faq-item reveal">
+        <summary>How should I store lyophilized peptides?</summary>
+        <p>Store unopened vials at −20°C for long-term stability. Once reconstituted, store at 2–8°C and use within 30 days. Avoid repeated freeze-thaw cycles.</p>
+      </details>
+      <details class="faq-item reveal">
+        <summary>Do you provide Certificates of Analysis?</summary>
+        <p>Yes. Every order includes a batch-specific COA with HPLC purity data, mass spectrometry identity confirmation, and endotoxin testing results.</p>
+      </details>
+      <details class="faq-item reveal">
+        <summary>What is your shipping policy?</summary>
+        <p>We ship via cold-chain packaging within the United States. Orders over $150 qualify for free expedited shipping. International shipping is available to qualified research institutions.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- Email Capture -->
+  <section class="email-section" id="newsletter">
+    <div class="email-inner reveal">
+      <h2>Stay in the loop.</h2>
+      <p>Get batch alerts, new compound launches, and research updates.</p>
+      <form class="email-form" id="emailForm">
+        <input type="email" id="emailInput" placeholder="your@lab.edu" required aria-label="Email address">
+        <button type="submit" class="btn-primary">Subscribe</button>
+      </form>
+      <p class="email-success" id="emailSuccess" hidden>You're subscribed. We'll be in touch.</p>
+      <p class="email-fine">Research professionals only. Unsubscribe anytime.</p>
+    </div>
+  </section>
+
+  <!-- Legal Disclaimer -->
+  <section class="disclaimer-section">
+    <div class="disclaimer-inner reveal">
+      <p><strong>Research Use Only.</strong> Products sold by RENVOA CLINIC are intended exclusively for in-vitro research and laboratory experimentation. Not for human consumption. By purchasing, you confirm you are a qualified researcher or represent a licensed research institution.</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="global-footer">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="#peptides">All Peptides</a></li>
+          <li><a href="#goals" data-goal="growth-hormone">Growth Hormone</a></li>
+          <li><a href="#goals" data-goal="weight-loss">Weight Loss</a></li>
+          <li><a href="#goals" data-goal="skin-research">Cosmetic Research</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Quality</h4>
+        <ul>
+          <li><a href="#quality">Testing Protocol</a></li>
+          <li><a href="coa.html">COA Lookup</a></li>
+          <li><a href="legal/research-agreement.html">Compliance</a></li>
+          <li><a href="wholesale.html">Wholesale</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#support">FAQ</a></li>
+          <li><a href="mailto:support@renvoaclinic.com">Contact</a></li>
+          <li><a href="legal/terms.html#shipping">Shipping</a></li>
+          <li><a href="legal/returns.html">Returns</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>About</h4>
+        <ul>
+          <li><a href="#quality">Our Standards</a></li>
+          <li><a href="wholesale.html">Bulk Orders</a></li>
+          <li><a href="mailto:research@renvoaclinic.com">Research Support</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>Copyright © 2026 RENVOA CLINIC. All rights reserved.</p>
+      <div class="footer-legal">
+        <a href="legal/privacy.html">Privacy Policy</a>
+        <a href="legal/terms.html">Terms of Sale</a>
+        <a href="legal/research-agreement.html">Research Agreement</a>
+        <a href="admin/">Business Portal</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Cart Drawer -->
+  <div class="cart-overlay" id="cartOverlay"></div>
+  <aside class="cart-drawer" id="cartDrawer">
+    <div class="cart-header">
+      <h2>Your Bag</h2>
+      <button class="cart-close" id="cartClose" aria-label="Close cart">&times;</button>
+    </div>
+    <div class="cart-items" id="cartItems">
+      <p class="cart-empty">Your bag is empty.</p>
+    </div>
+    <div class="cart-footer" id="cartFooter" hidden>
+      <div class="cart-subtotal">
+        <span>Subtotal</span>
+        <span id="cartSubtotal">$0.00</span>
+      </div>
+      <button class="btn-checkout">Check Out</button>
+      <p class="cart-note">Research use only. Qualification required at checkout.</p>
+    </div>
+  </aside>
+
+  <!-- Product Detail Modal -->
+  <div class="modal-overlay" id="modalOverlay"></div>
+  <dialog class="product-modal" id="productModal">
+    <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+    <div class="modal-scroll" id="modalScroll">
+      <div class="modal-content" id="modalContent"></div>
+    </div>
+  </dialog>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/product-details.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
