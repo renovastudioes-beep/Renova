@@ -129,7 +129,31 @@ window.RenvoaStudios = (function () {
     }
   }
 
+  const writeFingerprints = new Map();
+
   function write(key, value) {
+    let fp = '';
+    try {
+      fp = JSON.stringify(value);
+    } catch {
+      fp = String(Date.now());
+    }
+    const unchanged = writeFingerprints.get(key) === fp;
+    if (
+      !unchanged
+      && [
+        KEYS.clients,
+        KEYS.appointments,
+        KEYS.transactions,
+        KEYS.programOverrides,
+        KEYS.clientCredits,
+        KEYS.programVisitLog,
+        KEYS.programWarrantyLog,
+      ].includes(key)
+    ) {
+      invalidateClientDataCaches();
+    }
+    writeFingerprints.set(key, fp);
     if (window.StudioStorage?.write) {
       window.StudioStorage.write(key, value);
       return;
@@ -646,7 +670,7 @@ window.RenvoaStudios = (function () {
     if (!writeClientSessionRaw(JSON.stringify({ clientId: client.id, at: Date.now() }))) {
       return { error: 'Could not save login session. Allow site storage and try again.' };
     }
-    syncClientLinkedRecords(client);
+    syncClientLinkedRecords(client, { force: true });
     return {
       client: getClient(client.id) || client,
       needsPassword: clientNeedsPortalPassword(client),
@@ -698,9 +722,7 @@ window.RenvoaStudios = (function () {
   function getAuthedClient() {
     const session = getClientSession();
     if (!session) return null;
-    const client = getClient(session.clientId) || null;
-    if (client) syncClientLinkedRecords(client);
-    return client;
+    return getClient(session.clientId) || null;
   }
 
   function logoutClientPortal() {
@@ -1249,8 +1271,29 @@ window.RenvoaStudios = (function () {
     return { appointment: linked || appt };
   }
 
-  function syncClientLinkedRecords(client) {
+  const clientSyncCache = new Map();
+  const CLIENT_SYNC_TTL_MS = 120000;
+  const clientSummaryCache = new Map();
+  const CLIENT_SUMMARY_TTL_MS = 15000;
+  const voidedTxProcessed = new Set();
+
+  function invalidateClientDataCaches(clientId) {
+    if (clientId) {
+      clientSyncCache.delete(clientId);
+      clientSummaryCache.delete(clientId);
+    } else {
+      clientSyncCache.clear();
+      clientSummaryCache.clear();
+    }
+    voidedTxProcessed.clear();
+  }
+
+  function syncClientLinkedRecords(client, opts = {}) {
     if (!client?.id) return { linked: 0 };
+    const cached = clientSyncCache.get(client.id);
+    if (!opts.force && cached && (Date.now() - cached.at) < CLIENT_SYNC_TTL_MS) {
+      return { linked: cached.linked };
+    }
     let linked = 0;
 
     const apptList = getAppointments();
@@ -1361,6 +1404,8 @@ window.RenvoaStudios = (function () {
     });
     if (overridesDirty) write(KEYS.programOverrides, nextOverrides);
 
+    clientSyncCache.set(client.id, { at: Date.now(), linked });
+    if (linked > 0) invalidateClientDataCaches(client.id);
     return { linked };
   }
 
@@ -3592,7 +3637,6 @@ window.RenvoaStudios = (function () {
   function getClientTransactions(clientId) {
     const client = getClient(clientId);
     if (!client) return getTransactions().filter((t) => t.clientId === clientId);
-    syncClientLinkedRecords(client);
     return getTransactions().filter((t) => transactionMatchesClient(t, client));
   }
 
@@ -4226,7 +4270,10 @@ window.RenvoaStudios = (function () {
     if (!tx || getRefundableAmount(tx) > 0) return;
     (tx.items || []).forEach((item, idx) => {
       if (!resolveProgramFromTxItem(item)) return;
-      saveProgramOverride(clientId, `${transactionId}-${idx}`, {
+      const programId = `${transactionId}-${idx}`;
+      const existing = getProgramOverride(clientId, programId);
+      if (existing?.active === false) return;
+      saveProgramOverride(clientId, programId, {
         active: false,
         transactionId,
         itemIndex: idx,
@@ -4888,10 +4935,15 @@ window.RenvoaStudios = (function () {
     };
   }
 
-  function getClientProgramSummary(clientId) {
+  function getClientProgramSummary(clientId, opts = {}) {
     const client = getClient(clientId);
     if (!client) {
       return { programs: [], consultFor: null, nextAppointment: null, stats: {} };
+    }
+
+    const cached = clientSummaryCache.get(clientId);
+    if (!opts.force && cached && (Date.now() - cached.at) < CLIENT_SUMMARY_TTL_MS) {
+      return cached.data;
     }
 
     syncClientLinkedRecords(client);
@@ -4904,9 +4956,11 @@ window.RenvoaStudios = (function () {
 
     txs.forEach((tx) => {
       if (isSchedulingFeeTransaction(tx) || tx.type === 'refund') return;
+      if (voidedTxProcessed.has(tx.id)) return;
       if ((Number(tx.total) || 0) > 0 && getRefundableAmount(tx) <= 0) {
         voidProgramsForRefundedTransaction(clientId, tx.id);
       }
+      voidedTxProcessed.add(tx.id);
     });
 
     const programs = [];
@@ -4952,7 +5006,7 @@ window.RenvoaStudios = (function () {
     const creditBalance = getClientCreditBalance(clientId);
     const creditEntries = getClientCreditEntries(clientId);
 
-    return {
+    const result = {
       programs,
       consultFor,
       nextAppointment,
@@ -4966,6 +5020,8 @@ window.RenvoaStudios = (function () {
         creditBalance,
       },
     };
+    clientSummaryCache.set(clientId, { at: Date.now(), data: result });
+    return result;
   }
 
   function sortApptsByTime(list) {
@@ -5504,6 +5560,7 @@ window.RenvoaStudios = (function () {
     appointmentMatchesClient,
     ensureClientAppointmentAccess,
     syncClientLinkedRecords,
+    invalidateClientDataCaches,
     ensureClientPortalAccess,
     getAppointmentChangePolicy,
     getReschedulePolicy,

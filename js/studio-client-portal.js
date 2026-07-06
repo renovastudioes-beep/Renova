@@ -39,7 +39,39 @@
     intakeSkipped: [],
     intakeData: {},
     pendingIntakeRedirect: '',
+    booting: true,
+    busy: false,
   };
+
+  let renderQueued = false;
+  let remoteRenderTimer = null;
+  const slotAvailabilityCache = new Map();
+
+  function invalidatePortalDataCaches() {
+    const c = client();
+    RS()?.invalidateClientDataCaches?.(c?.id);
+    slotAvailabilityCache.clear();
+  }
+
+  async function runPortalBusy(work) {
+    state.busy = true;
+    scheduleRender(true);
+    try {
+      await window.StudioStorage?.whenReady?.();
+      return await work();
+    } finally {
+      state.busy = false;
+      scheduleRender(true);
+    }
+  }
+
+  function cachedSlotAvailability(date, durationMin) {
+    const key = `${date}:${durationMin}`;
+    if (slotAvailabilityCache.has(key)) return slotAvailabilityCache.get(key);
+    const availability = RS().getPublicSlotAvailability(date, durationMin);
+    slotAvailabilityCache.set(key, availability);
+    return availability;
+  }
 
   function esc(str) {
     return String(str || '')
@@ -673,10 +705,22 @@
       </article>`;
   }
 
+  function renderPortalLoading(message) {
+    return `
+      <div class="studio-portal-loading" role="status" aria-live="polite">
+        <div class="studio-portal-loading-spinner" aria-hidden="true"></div>
+        <p>${esc(message || 'Loading your account…')}</p>
+      </div>`;
+  }
+
   function renderDashboard() {
     const c = client();
-    const s = summary();
-    const appts = upcomingAppts();
+    const s = c ? RS().getClientProgramSummary(c.id) : null;
+    const appts = c
+      ? RS().getClientAppointments(c.id, c.phone)
+        .filter((a) => !['canceled', 'completed', 'no_show'].includes(a.status))
+        .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`))
+      : [];
     const next = s?.nextAppointment;
 
     return `
@@ -733,7 +777,7 @@
       || appt.duration
       || 60;
     const availability = state.rescheduleDate
-      ? RS().getPublicSlotAvailability(state.rescheduleDate, rescheduleBlock)
+      ? cachedSlotAvailability(state.rescheduleDate, rescheduleBlock)
       : { display: [] };
     const slots = availability.display || [];
 
@@ -905,7 +949,7 @@
     const blockMins = state.bookSchedulingDuration || RS().getSchedulingDurationMin(svc) || duration;
     const dates = RS().getPublicBookableDates(42);
     if (!state.bookDate && dates.length) state.bookDate = dates[0];
-    const availability = state.bookDate ? RS().getPublicSlotAvailability(state.bookDate, blockMins) : { display: [] };
+    const availability = state.bookDate ? cachedSlotAvailability(state.bookDate, blockMins) : { display: [] };
     const slots = availability.display || [];
 
     return `
@@ -1094,9 +1138,34 @@
       </div>`;
   }
 
+  function scheduleRender(immediate = false) {
+    if (immediate) {
+      renderQueued = false;
+      renderNow();
+      return;
+    }
+    if (renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => {
+      renderQueued = false;
+      renderNow();
+    });
+  }
+
   function render() {
+    scheduleRender(false);
+  }
+
+  function renderNow() {
     const root = $('#studioPortalRoot');
     if (!root) return;
+
+    if (state.booting || state.busy) {
+      root.innerHTML = renderPortalLoading(
+        state.booting ? 'Connecting to studio cloud…' : 'Updating your account…',
+      );
+      return;
+    }
 
     if (state.view === 'setup-password') {
       root.innerHTML = renderSetupPassword();
@@ -1163,42 +1232,42 @@
     state.confirmed = null;
   }
 
-  function submitReschedule(feePaid) {
-    const result = RS().rescheduleClientAppointment(state.rescheduleId, {
-      date: state.rescheduleDate,
-      startTime: state.rescheduleTime,
-      column: state.rescheduleColumn,
-    }, { feePaid });
+  async function submitReschedule(feePaid) {
+    await runPortalBusy(async () => {
+      const result = RS().rescheduleClientAppointment(state.rescheduleId, {
+        date: state.rescheduleDate,
+        startTime: state.rescheduleTime,
+        column: state.rescheduleColumn,
+      }, { feePaid });
 
-    if (result?.feeRequired) {
-      state.rescheduleStep = 'fee';
-      render();
-      return;
-    }
-    if (result?.error) {
-      state.error = result.error;
-      render();
-      return;
-    }
-    state.confirmed = result;
-    render();
+      if (result?.feeRequired) {
+        state.rescheduleStep = 'fee';
+        return;
+      }
+      if (result?.error) {
+        state.error = result.error;
+        return;
+      }
+      invalidatePortalDataCaches();
+      state.confirmed = result;
+    });
   }
 
-  function submitCancel(feePaid) {
-    const result = RS().cancelClientAppointment(state.cancelId, { feePaid });
+  async function submitCancel(feePaid) {
+    await runPortalBusy(async () => {
+      const result = RS().cancelClientAppointment(state.cancelId, { feePaid });
 
-    if (result?.feeRequired) {
-      state.cancelStep = 'fee';
-      render();
-      return;
-    }
-    if (result?.error) {
-      state.error = result.error;
-      render();
-      return;
-    }
-    state.confirmed = result;
-    render();
+      if (result?.feeRequired) {
+        state.cancelStep = 'fee';
+        return;
+      }
+      if (result?.error) {
+        state.error = result.error;
+        return;
+      }
+      invalidatePortalDataCaches();
+      state.confirmed = result;
+    });
   }
 
   function bind() {
@@ -1495,24 +1564,25 @@
       if (e.target.closest('[data-portal-book-confirm]')) {
         syncBookingPreferencesFromDOM('portal');
         const prefs = bookingPreferencesPayload();
-        const result = RS().createClientPortalBooking({
-          serviceId: state.bookServiceId,
-          serviceLabel: state.bookServiceLabel,
-          date: state.bookDate,
-          startTime: state.bookTime,
-          column: state.bookColumn,
-          duration: state.bookDuration,
-          schedulingDuration: state.bookSchedulingDuration || state.bookDuration,
-          clientPreferences: prefs,
-          bookingInspoPhotos: prefs?.inspoPhotos || [],
+        runPortalBusy(async () => {
+          const result = RS().createClientPortalBooking({
+            serviceId: state.bookServiceId,
+            serviceLabel: state.bookServiceLabel,
+            date: state.bookDate,
+            startTime: state.bookTime,
+            column: state.bookColumn,
+            duration: state.bookDuration,
+            schedulingDuration: state.bookSchedulingDuration || state.bookDuration,
+            clientPreferences: prefs,
+            bookingInspoPhotos: prefs?.inspoPhotos || [],
+          });
+          if (result?.error) {
+            state.error = result.error;
+            return;
+          }
+          invalidatePortalDataCaches();
+          state.confirmed = result;
         });
-        if (result?.error) {
-          state.error = result.error;
-          render();
-          return;
-        }
-        state.confirmed = result;
-        render();
       }
     });
 
@@ -1525,19 +1595,26 @@
         const secret = String(fd.get('secret') || '').trim();
         const loginMode = String(fd.get('loginMode') || state.loginMode || 'code');
         state.loginMode = loginMode;
-        const result = await RS().loginClientPortal(state.loginPhone, state.loginEmail, secret, { mode: loginMode });
-        if (result?.error) {
-          state.error = result.error;
-          render();
-          return;
+        state.busy = true;
+        scheduleRender(true);
+        try {
+          await window.StudioStorage?.whenReady?.();
+          const result = await RS().loginClientPortal(state.loginPhone, state.loginEmail, secret, { mode: loginMode });
+          if (result?.error) {
+            state.error = result.error;
+            return;
+          }
+          invalidatePortalDataCaches();
+          if (state.pendingIntakeRedirect) {
+            openIntakeView(state.pendingIntakeRedirect);
+            state.pendingIntakeRedirect = '';
+          } else {
+            state.view = 'dashboard';
+          }
+        } finally {
+          state.busy = false;
+          scheduleRender(true);
         }
-        if (state.pendingIntakeRedirect) {
-          openIntakeView(state.pendingIntakeRedirect);
-          state.pendingIntakeRedirect = '';
-        } else {
-          state.view = 'dashboard';
-        }
-        render();
         return;
       }
 
@@ -1546,28 +1623,33 @@
         const fd = new FormData(e.target);
         const password = String(fd.get('password') || '');
         const confirm = String(fd.get('confirm') || '');
-        let result;
-        if (RS()?.isClientPortalAuthed?.()) {
-          result = await RS().setupAuthedClientPortalPassword(password, confirm);
-        } else {
-          state.loginPhone = String(fd.get('phone') || '').trim();
-          state.loginEmail = String(fd.get('email') || '').trim();
-          state.setupCode = String(fd.get('code') || '').trim();
-          result = await RS().setupClientPortalPassword(
-            state.loginPhone,
-            state.loginEmail,
-            state.setupCode,
-            password,
-            confirm
-          );
+        state.busy = true;
+        scheduleRender(true);
+        try {
+          let result;
+          if (RS()?.isClientPortalAuthed?.()) {
+            result = await RS().setupAuthedClientPortalPassword(password, confirm);
+          } else {
+            state.loginPhone = String(fd.get('phone') || '').trim();
+            state.loginEmail = String(fd.get('email') || '').trim();
+            state.setupCode = String(fd.get('code') || '').trim();
+            result = await RS().setupClientPortalPassword(
+              state.loginPhone,
+              state.loginEmail,
+              state.setupCode,
+              password,
+              confirm
+            );
+          }
+          if (result?.error) {
+            state.error = result.error;
+            return;
+          }
+          state.view = 'dashboard';
+        } finally {
+          state.busy = false;
+          scheduleRender(true);
         }
-        if (result?.error) {
-          state.error = result.error;
-          render();
-          return;
-        }
-        state.view = 'dashboard';
-        render();
         return;
       }
 
@@ -1644,30 +1726,51 @@
 
   window.studioPortalOpen = openPortal;
 
-  function init() {
+  async function init() {
     if (!RS()) return;
+    state.booting = true;
+    scheduleRender(true);
+    bind();
+
+    try {
+      const storageStatus = await window.StudioStorage?.whenReady?.();
+      if (storageStatus?.error && window.StudioStorage?.isCloudEnabled?.()) {
+        state.error = `Cloud sync is slow or offline (${storageStatus.error}). Showing saved data on this device.`;
+      }
+    } catch (err) {
+      console.error('Portal storage init error', err);
+    } finally {
+      state.booting = false;
+    }
+
     RS().logoutClientPortal();
     state.view = 'login';
-    render();
-    bind();
+    scheduleRender(true);
+
     const onPortalHash = () => {
       if (!window.location.hash.startsWith('#portal')) return;
       if (window.studioActiveLine !== 'portal') {
         window.setStudioLine?.('portal', { updateUrl: false, silent: true });
       }
       applyPortalHashRoute();
-      render();
+      scheduleRender();
     };
     window.addEventListener('hashchange', onPortalHash);
     if (window.location.hash.startsWith('#portal')) {
       window.setStudioLine?.('portal', { updateUrl: false, silent: true });
       applyPortalHashRoute();
-      render();
+      scheduleRender();
     }
+
+    window.addEventListener('studio-storage-remote', () => {
+      if (!RS()?.isClientPortalAuthed?.()) return;
+      clearTimeout(remoteRenderTimer);
+      remoteRenderTimer = setTimeout(() => scheduleRender(), 600);
+    });
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => { init(); });
   } else {
     init();
   }

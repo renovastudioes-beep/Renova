@@ -10416,6 +10416,18 @@ img { max-width: 100%; display: block; }
   .studio-pos-tab { padding: 6px 10px; font-size: 12px; }
 }
 
+@media (max-width: 834px) {
+  .studio-pos-auth-modal .studio-glass-wizard-panel {
+    width: 100%;
+    max-width: none;
+  }
+
+  .admin-login-card {
+    width: calc(100% - 32px);
+    max-width: 400px;
+  }
+}
+
 /* Program family cards & payment modal */
 .studio-family-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 

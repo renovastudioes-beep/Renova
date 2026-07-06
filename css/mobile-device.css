@@ -1,0 +1,348 @@
+/* ONYX — iPhone & iPad polish (safe areas, touch, layout) */
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: clip;
+}
+
+.global-nav {
+  padding-top: var(--safe-top);
+}
+
+.global-nav .nav-content {
+  padding-left: max(22px, var(--safe-left));
+  padding-right: max(22px, var(--safe-right));
+}
+
+.nav-links.mobile-open {
+  top: calc(var(--nav-height) + var(--safe-top));
+  padding-bottom: calc(20px + var(--safe-bottom));
+  max-height: calc(100dvh - var(--nav-height) - var(--safe-top));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nav-links.mobile-open a,
+.nav-hamburger {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-topbar {
+  padding-top: calc(10px + var(--safe-top));
+  padding-left: max(16px, var(--safe-left));
+  padding-right: max(16px, var(--safe-right));
+}
+
+.admin-main {
+  padding-bottom: calc(40px + var(--safe-bottom));
+}
+
+.admin-login-card {
+  margin: max(24px, var(--safe-top)) auto max(24px, var(--safe-bottom));
+}
+
+.gateway-body {
+  min-height: 100dvh;
+  height: 100dvh;
+}
+
+.renova-gateway {
+  min-height: 100dvh;
+  height: 100dvh;
+}
+
+.gateway-hint {
+  bottom: calc(14px + var(--safe-bottom));
+}
+
+/* Prevent iOS zoom on input focus */
+@media (max-width: 834px) {
+  input,
+  select,
+  textarea,
+  .form-field input,
+  .form-field select,
+  .form-field textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch-friendly controls */
+@media (hover: none) and (pointer: coarse) {
+  .btn-primary,
+  .btn-secondary,
+  .admin-nav-item,
+  .studio-pos-tab,
+  .studio-line-switch-btn,
+  .studio-client-tabs .studio-pos-tab,
+  .studio-book-line-btn,
+  .studio-glass-btn,
+  .admin-order-card,
+  .studio-client-card,
+  .studio-pos-service-card,
+  .studio-family-card {
+    min-height: 44px;
+  }
+
+  .studio-cal-cell,
+  .studio-cal-v2-slot {
+    min-height: 44px;
+  }
+}
+
+/* ——— iPad & large phones (≤834px) ——— */
+@media (max-width: 834px) {
+  .studios-page .studio-hero {
+    padding-top: calc(var(--studio-stack-sm) + 8px);
+  }
+
+  .studio-line-switch-wrap {
+    padding-left: max(var(--studio-gutter), var(--safe-left));
+    padding-right: max(var(--studio-gutter), var(--safe-right));
+  }
+
+  .studio-line-switch-track {
+    width: 100%;
+    max-width: none;
+  }
+
+  .studio-line-switch-btn {
+    padding: 10px 8px;
+    font-size: 10px;
+    min-height: 40px;
+  }
+
+  .hero-ctas {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .hero-ctas .btn-primary,
+  .hero-ctas .link-cta {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .studio-portal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .studio-portal-dash-head,
+  .studio-portal-program-card-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .studio-portal-program-head-badges {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .studio-portal-root,
+  .studio-book-root {
+    padding-left: max(0px, var(--safe-left));
+    padding-right: max(0px, var(--safe-right));
+  }
+
+  .studio-book-root {
+    padding-bottom: var(--safe-bottom);
+  }
+
+  .studio-client-layout .admin-order-list {
+    max-height: 42vh;
+  }
+
+  .studio-client-detail-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .studio-client-detail-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .studio-client-detail-actions .btn-primary,
+  .studio-client-detail-actions .btn-secondary {
+    flex: 1 1 auto;
+    min-width: 120px;
+  }
+
+  .studio-client-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    margin-left: -4px;
+    margin-right: -4px;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .studio-client-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .studio-client-tabs .studio-pos-tab {
+    flex-shrink: 0;
+  }
+
+  .studio-pos-subnav,
+  .studio-settings-subnav,
+  .crm-subnav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+
+  .studio-pos-subnav::-webkit-scrollbar,
+  .studio-settings-subnav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .studio-cal-grid-wrap,
+  .studio-cal-grid-full {
+    max-height: min(62vh, calc(100dvh - 220px));
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--apple-gray-2);
+  }
+
+  .studio-cal-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .studio-cal-toolbar-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .studio-glass-wizard {
+    padding: max(12px, var(--safe-top)) max(12px, var(--safe-right)) max(12px, var(--safe-bottom)) max(12px, var(--safe-left));
+    align-items: flex-end;
+  }
+
+  .studio-glass-wizard-panel,
+  .studio-program-modal-panel.studio-glass-panel {
+    width: 100%;
+    max-width: none;
+    max-height: min(92dvh, calc(100dvh - var(--safe-top) - 24px));
+    border-radius: 20px 20px 0 0;
+  }
+
+  .studio-glass-wizard-panel-wide {
+    max-width: none;
+  }
+
+  .admin-split,
+  .studio-cloud-panel {
+    margin-top: 16px;
+  }
+
+  .business-mode-switch {
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+}
+
+/* ——— iPhone (≤480px) ——— */
+@media (max-width: 480px) {
+  .studio-pos-service-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .studio-pos-kpi-grid,
+  .studio-pos-kpi-grid-ops,
+  .studio-client-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .studio-family-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .studio-program-adjust-grid,
+  .studio-client-program-adjust-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .studio-portal-card,
+  .studio-portal-dashboard {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  .admin-topbar-meta {
+    display: none;
+  }
+
+  .admin-topbar-right {
+    gap: 8px;
+  }
+
+  .studio-book-progress {
+    gap: 4px;
+  }
+
+  .studio-book-progress li {
+    flex: 1;
+    min-width: 0;
+    font-size: 8px;
+  }
+
+  .studio-inquire-row,
+  .studio-glass-fields {
+    grid-template-columns: 1fr !important;
+  }
+
+  .nav-actions .nav-cta-btn {
+    display: none;
+  }
+
+  .nav-links.mobile-open .nav-cta-inline {
+    display: flex;
+    margin-top: 8px;
+  }
+}
+
+/* ——— iPad landscape / small laptops ——— */
+@media (min-width: 835px) and (max-width: 1100px) {
+  .studio-pos-layout {
+    grid-template-columns: 1fr 280px;
+    gap: 16px;
+  }
+
+  .studio-cal-v2 {
+    min-width: 520px;
+  }
+
+  .admin-main {
+    padding-left: max(20px, var(--safe-left));
+    padding-right: max(20px, var(--safe-right));
+  }
+}

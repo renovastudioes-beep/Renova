@@ -22,7 +22,13 @@ window.StudioStorage = (function () {
     'renova-studio-program-warranty-log',
   ]);
 
+  const FETCH_TIMEOUT_MS = 12000;
+  const WRITE_DEBOUNCE_MS = 500;
+  const NOTIFY_DEBOUNCE_MS = 120;
+  const ECHO_SUPPRESS_MS = 2500;
+
   const cache = new Map();
+  const dataFingerprints = new Map();
   let client = null;
   let workspaceId = 'onyx';
   let ready = false;
@@ -31,7 +37,10 @@ window.StudioStorage = (function () {
   const pendingWrites = new Map();
   const writeTimers = new Map();
   const listeners = new Set();
-  const WRITE_DEBOUNCE_MS = 350;
+  const echoSuppress = new Map();
+  let notifyTimer = null;
+  const pendingNotifyKeys = new Set();
+  let initError = null;
 
   function cfg() {
     return window.RENVOA_CONFIG?.cloud || {};
@@ -46,6 +55,31 @@ window.StudioStorage = (function () {
     return STUDIO_KEYS.has(key);
   }
 
+  function fingerprint(value) {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(Date.now());
+    }
+  }
+
+  function withTimeout(promise, ms, label) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`${label || 'Request'} timed out after ${ms / 1000}s`));
+      }, ms);
+      Promise.resolve(promise)
+        .then((value) => {
+          clearTimeout(timer);
+          resolve(value);
+        })
+        .catch((err) => {
+          clearTimeout(timer);
+          reject(err);
+        });
+    });
+  }
+
   function readLocal(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
@@ -56,13 +90,25 @@ window.StudioStorage = (function () {
   }
 
   function writeLocal(key, value) {
+    const next = fingerprint(value);
+    if (dataFingerprints.get(key) === next) return;
+    dataFingerprints.set(key, next);
     localStorage.setItem(key, JSON.stringify(value));
   }
 
-  function notify(key) {
-    listeners.forEach((fn) => {
-      try { fn(key); } catch (err) { console.error('StudioStorage listener error', err); }
-    });
+  function scheduleNotify(key) {
+    pendingNotifyKeys.add(key);
+    if (notifyTimer) return;
+    notifyTimer = setTimeout(() => {
+      notifyTimer = null;
+      const keys = [...pendingNotifyKeys];
+      pendingNotifyKeys.clear();
+      keys.forEach((k) => {
+        listeners.forEach((fn) => {
+          try { fn(k); } catch (err) { console.error('StudioStorage listener error', err); }
+        });
+      });
+    }, NOTIFY_DEBOUNCE_MS);
   }
 
   function read(key, fallback) {
@@ -73,15 +119,21 @@ window.StudioStorage = (function () {
   }
 
   function write(key, value) {
+    const fp = fingerprint(value);
+    const unchanged = dataFingerprints.get(key) === fp;
+    if (unchanged && cache.has(key)) return;
+
     if (!isCloudEnabled() || !isManagedKey(key)) {
       writeLocal(key, value);
-      notify(key);
+      if (!unchanged) scheduleNotify(key);
       return;
     }
+
     cache.set(key, value);
+    dataFingerprints.set(key, fp);
     writeLocal(key, value);
     queueCloudWrite(key, value);
-    notify(key);
+    scheduleNotify(key);
   }
 
   function queueCloudWrite(key, value) {
@@ -98,16 +150,21 @@ window.StudioStorage = (function () {
 
     const currentVersion = (cache.get(`__ver:${key}`) || 0) + 1;
     cache.set(`__ver:${key}`, currentVersion);
+    echoSuppress.set(`${key}:${currentVersion}`, Date.now());
 
-    const { error } = await client
-      .from('studio_collections')
-      .upsert({
-        workspace_id: workspaceId,
-        collection_key: key,
-        data: value,
-        version: currentVersion,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'workspace_id,collection_key' });
+    const { error } = await withTimeout(
+      client
+        .from('studio_collections')
+        .upsert({
+          workspace_id: workspaceId,
+          collection_key: key,
+          data: value,
+          version: currentVersion,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'workspace_id,collection_key' }),
+      FETCH_TIMEOUT_MS,
+      `Cloud save (${key})`,
+    );
 
     if (error) {
       console.error('StudioStorage cloud write failed:', key, error);
@@ -123,30 +180,52 @@ window.StudioStorage = (function () {
   }
 
   async function loadFromCloud() {
-    const { data, error } = await client
-      .from('studio_collections')
-      .select('collection_key, data, version, updated_at')
-      .eq('workspace_id', workspaceId);
+    const { data, error } = await withTimeout(
+      client
+        .from('studio_collections')
+        .select('collection_key, data, version, updated_at')
+        .eq('workspace_id', workspaceId),
+      FETCH_TIMEOUT_MS,
+      'Cloud load',
+    );
 
     if (error) throw new Error(error.message || 'Could not load studio data from cloud.');
 
     (data || []).forEach((row) => {
       cache.set(row.collection_key, row.data);
       cache.set(`__ver:${row.collection_key}`, row.version || 0);
+      dataFingerprints.set(row.collection_key, fingerprint(row.data));
       writeLocal(row.collection_key, row.data);
     });
+  }
+
+  function shouldSuppressEcho(key, version) {
+    const stamp = echoSuppress.get(`${key}:${version}`);
+    if (!stamp) return false;
+    if (Date.now() - stamp > ECHO_SUPPRESS_MS) {
+      echoSuppress.delete(`${key}:${version}`);
+      return false;
+    }
+    return true;
   }
 
   function applyRemoteRow(row) {
     if (!row?.collection_key) return;
     const key = row.collection_key;
     const remoteVersion = row.version || 0;
+    if (shouldSuppressEcho(key, remoteVersion)) return;
+
     const localVersion = cache.get(`__ver:${key}`) || 0;
     if (remoteVersion < localVersion) return;
+
+    const fp = fingerprint(row.data);
+    if (dataFingerprints.get(key) === fp) return;
+
     cache.set(key, row.data);
     cache.set(`__ver:${key}`, remoteVersion);
+    dataFingerprints.set(key, fp);
     writeLocal(key, row.data);
-    notify(key);
+    scheduleNotify(key);
     window.dispatchEvent(new CustomEvent('studio-storage-remote', { detail: { key } }));
   }
 
@@ -176,6 +255,7 @@ window.StudioStorage = (function () {
 
     readyPromise = (async () => {
       workspaceId = options.workspaceId || cfg().workspaceId || 'onyx';
+      initError = null;
 
       if (!isCloudEnabled()) {
         ready = true;
@@ -195,10 +275,11 @@ window.StudioStorage = (function () {
       ready = true;
       return { mode: 'cloud', workspaceId, collections: cache.size };
     })().catch((err) => {
+      initError = err.message || String(err);
       readyPromise = null;
       console.error('StudioStorage init failed — falling back to local data.', err);
       ready = true;
-      return { mode: 'local-fallback', error: err.message || String(err) };
+      return { mode: 'local-fallback', error: initError };
     });
 
     return readyPromise;
@@ -212,9 +293,15 @@ window.StudioStorage = (function () {
     return ready;
   }
 
+  function getInitError() {
+    return initError;
+  }
+
   function getMode() {
     if (!isCloudEnabled()) return 'local';
-    return ready ? 'cloud' : 'initializing';
+    if (!ready) return 'initializing';
+    if (initError) return 'local-fallback';
+    return 'cloud';
   }
 
   function onChange(fn) {
@@ -233,6 +320,7 @@ window.StudioStorage = (function () {
         || (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 0)
       ) return;
       cache.set(key, data);
+      dataFingerprints.set(key, fingerprint(data));
       payload.push({
         workspace_id: workspaceId,
         collection_key: key,
@@ -242,9 +330,13 @@ window.StudioStorage = (function () {
       });
     });
     if (!payload.length) return { migrated: 0 };
-    const { error } = await client.from('studio_collections').upsert(payload, {
-      onConflict: 'workspace_id,collection_key',
-    });
+    const { error } = await withTimeout(
+      client.from('studio_collections').upsert(payload, {
+        onConflict: 'workspace_id,collection_key',
+      }),
+      FETCH_TIMEOUT_MS * 2,
+      'Cloud migration',
+    );
     if (error) throw new Error(error.message || 'Migration failed.');
     return { migrated: payload.length };
   }
@@ -272,6 +364,7 @@ window.StudioStorage = (function () {
     init,
     whenReady,
     isReady,
+    getInitError,
     getMode,
     isCloudEnabled,
     read,

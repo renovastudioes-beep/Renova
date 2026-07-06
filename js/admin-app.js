@@ -5412,11 +5412,11 @@
     });
 
     window.StudioStorage?.onChange?.(() => {
-      if (A?.isAuthed() && businessMode === 'clinic') scheduleRenderView();
+      if (A?.isAuthed() && businessMode === 'clinic') scheduleRenderView(450);
     });
 
     window.addEventListener('studio-storage-remote', () => {
-      if (A?.isAuthed() && businessMode === 'clinic') scheduleRenderView();
+      if (A?.isAuthed() && businessMode === 'clinic') scheduleRenderView(450);
     });
 
     if (A?.isAuthed()) {
