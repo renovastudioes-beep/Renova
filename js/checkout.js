@@ -1,9 +1,11 @@
 (function () {
   'use strict';
   const C = window.RenvoaCart;
+  const SF = window.RenvoaStorefront;
   const $ = (s) => document.querySelector(s);
 
   let bacAddon = false;
+  const isQuote = SF.checkoutIsQuote();
 
   function renderSummary() {
     const cart = C.getCart();
@@ -19,17 +21,22 @@
     $('#checkoutWrap').hidden = false;
 
     list.innerHTML = cart.map((item) => {
-      const p = PRODUCTS[item.id];
+      const priceCell = isQuote
+        ? '<span class="checkout-quote-label">Quoted in POS</span>'
+        : `<span>${C.formatPrice(C.getItemPrice(item) * item.qty)}</span>`;
       return `<div class="checkout-line">
         <span>${C.getItemLabel(item)} × ${item.qty}</span>
-        <span>${C.formatPrice(C.getItemPrice(item) * item.qty)}</span>
+        ${priceCell}
       </div>`;
     }).join('');
 
     if (bacAddon) {
+      const bacPrice = isQuote
+        ? '<span class="checkout-quote-label">Quoted in POS</span>'
+        : `<span>${C.formatPrice(12)}</span>`;
       list.innerHTML += `<div class="checkout-line checkout-addon-line">
         <span>Bacteriostatic Water 30mL × 1</span>
-        <span>${C.formatPrice(12)}</span>
+        ${bacPrice}
       </div>`;
     }
 
@@ -37,16 +44,23 @@
     const ship = C.getShipping(sub);
     const total = sub + ship;
 
-    $('#sumSubtotal').textContent = C.formatPrice(sub);
-    $('#sumShipping').textContent = ship === 0 ? 'Free' : C.formatPrice(ship);
-    $('#sumTotal').textContent = C.formatPrice(total);
-
-    const note = $('#shippingNote');
-    if (note) {
-      const threshold = RENVOA_CONFIG.freeShippingThreshold;
-      note.textContent = ship > 0
-        ? `Add ${C.formatPrice(threshold - sub)} more for free cold-chain shipping.`
-        : 'You qualify for free cold-chain shipping.';
+    if (isQuote) {
+      $('#sumSubtotal').textContent = 'Pending';
+      $('#sumShipping').textContent = 'Pending';
+      $('#sumTotal').textContent = 'Pending quote';
+      const note = $('#shippingNote');
+      if (note) note.textContent = 'Final pricing and shipping are confirmed by our team before fulfillment.';
+    } else {
+      $('#sumSubtotal').textContent = C.formatPrice(sub);
+      $('#sumShipping').textContent = ship === 0 ? 'Free' : C.formatPrice(ship);
+      $('#sumTotal').textContent = C.formatPrice(total);
+      const note = $('#shippingNote');
+      if (note) {
+        const threshold = RENVOA_CONFIG.freeShippingThreshold;
+        note.textContent = ship > 0
+          ? `Add ${C.formatPrice(threshold - sub)} more for free cold-chain shipping.`
+          : 'You qualify for free cold-chain shipping.';
+      }
     }
   }
 
@@ -84,19 +98,29 @@
       items: [...cart],
       bacWater: bacAddon,
       qualified: $('#ruoAck').checked && $('#ageAck').checked,
+      pricingStatus: isQuote ? 'pending' : 'confirmed',
     };
 
-    const sub = C.getCartSubtotal(cart) + (bacAddon ? 12 : 0);
-    order.subtotal = sub;
-    order.shipping = C.getShipping(sub);
-    order.total = sub + order.shipping;
+    const pricing = window.RenvoaPOS?.priceCartItems(cart, bacAddon);
+    if (pricing) {
+      order.internalPricing = pricing;
+      if (!isQuote) {
+        order.subtotal = pricing.subtotal;
+        order.shipping = pricing.shipping;
+        order.total = pricing.total;
+        order.cogs = pricing.cogs;
+        order.margin = pricing.margin;
+      } else {
+        order.subtotal = null;
+        order.shipping = null;
+        order.total = null;
+      }
+    }
 
-    if (RENOVA_CONFIG.stripePublishableKey && window.Stripe) {
-      // Production: POST order to your backend → create Stripe Checkout Session → redirect
-      // fetch('/api/create-checkout', { method: 'POST', body: JSON.stringify(order) })
+    if (ONYX_CONFIG.stripePublishableKey && window.Stripe && !isQuote) {
       alert('Stripe key is set. Connect a backend endpoint at /api/create-checkout to enable live payments.');
       btn.disabled = false;
-      btn.textContent = 'Place Order';
+      btn.textContent = isQuote ? 'Submit order request' : 'Place Order';
       return;
     }
 
@@ -104,7 +128,7 @@
     window.RenvoaAdmin?.registerOrder(order);
     C.clearCart();
     if (bacAddon) localStorage.setItem('renvoa-bac-addon', '1');
-    window.RenvoaTrack?.('purchase', { value: order.total, currency: 'USD' });
+    if (!isQuote) window.RenvoaTrack?.('purchase', { value: order.total, currency: 'USD' });
     window.location.href = 'order-confirmation.html?id=' + order.id;
   });
 })();

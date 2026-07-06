@@ -114,7 +114,7 @@ const PRODUCTS = {
     currentLot: 'RC-RS26-0408', lotPurity: '99.6%',
     researchAreas: ['Tissue repair', 'Angiogenesis', 'Cell migration', 'Recovery models'],
     mechanism: 'Dual-pathway approach: BPC-157 (VEGFR2/NO signaling) + TB-500 (actin migration).',
-    researchHighlights: ['Save $15 vs. buying separately', 'Same-batch COAs included for both compounds', 'Most popular pairing in recovery research'],
+    researchHighlights: ['Bundle pricing — confirmed at checkout', 'Same-batch COAs included for both compounds', 'Most popular pairing in recovery research'],
     reconstitution: 'Reconstitute each vial separately per individual compound protocols.',
     handling: 'Store all vials at −20°C until use.',
   },
@@ -130,7 +130,7 @@ const PRODUCTS = {
     currentLot: 'RC-GH26-0390', lotPurity: '99.5%',
     researchAreas: ['GH axis', 'Pituitary signaling', 'IGF-1 pathways'],
     mechanism: 'CJC-1295 activates GHRH receptors; Ipamorelin activates ghrelin receptors — modeling dual-input GH regulation.',
-    researchHighlights: ['Save $12 vs. buying separately', 'Standard pairing in endocrine research literature'],
+    researchHighlights: ['Bundle pricing — confirmed at checkout', 'Standard pairing in endocrine research literature'],
     reconstitution: 'Reconstitute each vial separately.',
     handling: 'Store at −20°C. Reconstituted: 2–8°C.',
   },
@@ -149,3 +149,6 @@ const PRODUCTS = {
     handling: 'Single-user vial. Discard 28 days after first puncture.',
   },
 };
+
+window.PRODUCTS = PRODUCTS;
+window.GOAL_CATEGORIES = GOAL_CATEGORIES;

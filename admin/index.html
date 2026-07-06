@@ -3,24 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Business Portal — RENVOA CLINIC</title>
+  <title>Business Portal — ONYX Peptides</title>
   <meta name="robots" content="noindex, nofollow">
-  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="stylesheet" href="../css/styles.css?v=62">
 </head>
 <body class="page-body admin-body">
   <div id="adminLogin" class="admin-login">
     <div class="admin-login-card">
-      <p class="admin-login-eyebrow">RENVOA CLINIC</p>
+      <p class="admin-login-eyebrow">ONYX</p>
       <h1>Business Portal</h1>
-      <p class="admin-login-sub">Orders, clients, finance, and goals — team access only.</p>
+      <p class="admin-login-sub">Orders, clients, finance, studios, and goals — team access only.</p>
+      <p class="admin-login-hint">Team access code: <strong>onyx2026</strong></p>
       <form id="loginForm">
         <label class="form-field">
           <span>Access code</span>
-          <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Enter team password">
+          <input type="text" id="loginPassword" required autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="onyx2026">
         </label>
-        <p class="admin-login-error" id="loginError" hidden>Incorrect access code. Try <strong>renvoa2026</strong>.</p>
+        <p class="admin-login-error" id="loginError" hidden>Incorrect access code. Use <strong>onyx2026</strong>.</p>
         <p class="admin-login-error" id="loginSystemError" hidden></p>
-        <button type="submit" class="btn-primary btn-full" id="loginBtn">Unlock</button>
+        <button type="submit" class="btn-primary btn-full" id="loginBtn" disabled>Loading portal…</button>
       </form>
       <a href="../index.html" class="admin-back-link">← Back to store</a>
     </div>
@@ -29,8 +30,17 @@
   <div id="adminApp" class="admin-app" hidden>
     <header class="admin-topbar">
       <div class="admin-topbar-left">
-        <a href="../index.html" class="admin-brand">RENVOA CLINIC</a>
-        <span class="admin-topbar-badge">Business</span>
+        <a href="../index.html" class="admin-brand">ONYX</a>
+        <span class="admin-topbar-badge" id="businessModeBadge">Peptide</span>
+      </div>
+      <div class="admin-topbar-center">
+        <div class="business-mode-switch" id="businessModeSwitch" data-mode="peptide" role="tablist" aria-label="Business mode">
+          <div class="business-mode-switch-track">
+            <span class="business-mode-switch-bubble" aria-hidden="true"></span>
+            <button type="button" class="business-mode-switch-btn active" data-business-mode="peptide" role="tab" aria-selected="true">Peptide</button>
+            <button type="button" class="business-mode-switch-btn" data-business-mode="clinic" role="tab" aria-selected="false">Clinic</button>
+          </div>
+        </div>
       </div>
       <div class="admin-topbar-right">
         <span class="admin-live-dot"></span>
@@ -41,13 +51,28 @@
 
     <div class="admin-shell">
       <nav class="admin-nav" id="adminNav">
-        <button type="button" class="admin-nav-item active" data-view="overview">Overview</button>
-        <button type="button" class="admin-nav-item" data-view="orders">Orders <span class="admin-nav-badge" id="newOrdersBadge"></span></button>
-        <button type="button" class="admin-nav-item" data-view="pipeline">Pipeline</button>
-        <button type="button" class="admin-nav-item" data-view="crm">CRM <span class="admin-nav-badge admin-nav-badge-warn" id="crmTasksBadge"></span></button>
-        <button type="button" class="admin-nav-item" data-view="messages">Messages</button>
-        <button type="button" class="admin-nav-item" data-view="finance">Finance &amp; P&amp;L</button>
-        <button type="button" class="admin-nav-item" data-view="goals">Goals</button>
+        <div class="admin-nav-group" data-nav-mode="peptide">
+          <p class="admin-nav-eyebrow">Peptide</p>
+          <button type="button" class="admin-nav-item active" data-view="overview">Overview</button>
+          <button type="button" class="admin-nav-item" data-view="pos">POS <span class="admin-nav-badge admin-nav-badge-warn" id="posQuotesBadge"></span></button>
+          <button type="button" class="admin-nav-item" data-view="orders">Orders <span class="admin-nav-badge" id="newOrdersBadge"></span></button>
+          <button type="button" class="admin-nav-item" data-view="pipeline">Pipeline</button>
+          <button type="button" class="admin-nav-item" data-view="crm">CRM <span class="admin-nav-badge admin-nav-badge-warn" id="crmTasksBadge"></span></button>
+          <button type="button" class="admin-nav-item" data-view="messages">Messages</button>
+          <button type="button" class="admin-nav-item" data-view="finance">Finance &amp; P&amp;L</button>
+          <button type="button" class="admin-nav-item" data-view="goals">Goals</button>
+        </div>
+        <div class="admin-nav-group" data-nav-mode="clinic" hidden>
+          <p class="admin-nav-eyebrow">Clinic</p>
+          <button type="button" class="admin-nav-item" data-clinic-tab="dashboard">Dashboard</button>
+          <button type="button" class="admin-nav-item" data-clinic-tab="pos">POS</button>
+          <button type="button" class="admin-nav-item" data-clinic-tab="calendar">Calendar</button>
+          <button type="button" class="admin-nav-item" data-clinic-tab="clients">Clients</button>
+          <button type="button" class="admin-nav-item" data-clinic-tab="inquiries">Inquiries <span class="admin-nav-badge" id="studioInquiriesBadge"></span></button>
+          <button type="button" class="admin-nav-item" data-clinic-tab="transactions">Register</button>
+          <button type="button" class="admin-nav-item" data-clinic-tab="finance">Finance &amp; P&amp;L</button>
+          <button type="button" class="admin-nav-item" data-clinic-tab="settings">Settings</button>
+        </div>
       </nav>
 
       <main class="admin-main" id="adminMain"></main>
@@ -55,9 +80,23 @@
   </div>
 
   <script src="../js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/studio-storage.js?v=1"></script>
+  <script src="../js/storefront.js"></script>
   <script src="../js/products.js"></script>
   <script src="../js/cart.js"></script>
-  <script src="../js/admin-data.js"></script>
-  <script src="../js/admin-app.js"></script>
+  <script src="../js/pos-data.js"></script>
+  <script src="../js/studios-pricing.js"></script>
+  <script src="../js/studio-extension-data.js"></script>
+  <script src="../js/studio-visit-flow.js?v=38"></script>
+  <script src="../js/studio-rebook.js?v=32"></script>
+  <script src="../js/studio-admin.js?v=85"></script>
+  <script src="../js/studio-bonus-pool.js?v=1"></script>
+  <script src="../js/studio-pos-ui.js?v=64"></script>
+  <script src="../js/studio-finance-ui.js?v=6"></script>
+  <script src="../js/studio-calendar.js?v=30"></script>
+  <script src="../js/studio-appt-timers.js?v=30"></script>
+  <script src="../js/admin-data.js?v=33"></script>
+  <script src="../js/admin-app.js?v=59"></script>
 </body>
 </html>

@@ -27,7 +27,7 @@ const PRODUCT_DETAILS = {
     faq: [
       { q: 'What concentrations are used in research?', a: 'Concentrations vary by model system. In-vitro assays typically use µM ranges; animal studies are model-dependent. Consult published protocols for your specific application.' },
       { q: 'Can BPC-157 be combined with TB-500 in studies?', a: 'Yes — many published protocols examine co-administration for complementary repair pathways. Both are sold separately for flexible dosing in your lab.' },
-      { q: 'What purity should I expect?', a: 'RENVOA CLINIC supplies ≥99% purity by HPLC with MS identity confirmation. A batch-specific COA ships with every order.' },
+      { q: 'What purity should I expect?', a: 'ONYX Peptides supplies ≥99% purity by HPLC with MS identity confirmation. A batch-specific COA ships with every order.' },
     ],
     related: ['tb-500', 'ghk-cu'],
     reconstitutionSteps: ['Wipe vial stopper with alcohol swab.', 'Draw 1–2 mL bacteriostatic water into sterile syringe.', 'Inject slowly against vial wall — do not spray directly onto powder.', 'Gently swirl until fully dissolved (do not shake).', 'Label with date; store at 2–8°C, use within 30 days.'],
@@ -59,7 +59,7 @@ const PRODUCT_DETAILS = {
     faq: [
       { q: 'How does TB-500 differ from full thymosin beta-4?', a: 'TB-500 is the active LKKTETQ fragment — more stable, easier to synthesize, and the most commonly used form in modern research literature.' },
       { q: 'What is the typical vial size for protocols?', a: 'Our 5mg lyophilized vial is the standard research unit. Higher-volume labs often order multiple vials per batch for consistent lot use across a study.' },
-      { q: 'Is cold-chain shipping required?', a: 'Yes. All RENVOA CLINIC peptides ship in temperature-controlled packaging to preserve lyophilized stability.' },
+      { q: 'Is cold-chain shipping required?', a: 'Yes. All ONYX Peptides peptides ship in temperature-controlled packaging to preserve lyophilized stability.' },
     ],
     related: ['bpc-157', 'ghk-cu'],
     reconstitutionSteps: ['Allow vial to reach room temperature (5 min).', 'Add 1–2 mL bacteriostatic water along the vial wall.', 'Wait 2 minutes for passive dissolution.', 'Gently swirl — never shake lyophilized peptides.', 'Store reconstituted solution at 2–8°C; use within 14–30 days.'],
@@ -123,7 +123,7 @@ const PRODUCT_DETAILS = {
     faq: [
       { q: 'Ipamorelin vs. GHRP-6 — which for my lab?', a: 'Ipamorelin if you need selective GH release without cortisol/prolactin elevation. GHRP-6 if you specifically need to study those secondary pathways.' },
       { q: 'What sizes are available?', a: '2mg and 5mg lyophilized vials. The 2mg format suits cell culture; 5mg is preferred for in-vivo protocol work.' },
-      { q: 'Can I pair it with CJC-1295?', a: 'Yes — this is one of the most common GH axis research combinations. Both are available from RENVOA CLINIC.' },
+      { q: 'Can I pair it with CJC-1295?', a: 'Yes — this is one of the most common GH axis research combinations. Both are available from ONYX Peptides.' },
     ],
     related: ['cjc-1295', 'semaglutide'],
     reconstitutionSteps: ['Bring vial to room temperature.', 'Reconstitute with 1–2 mL bacteriostatic water.', 'Roll gently between palms — avoid shaking.', 'Solution should be clear; discard if cloudy.', 'Refrigerate at 2–8°C; stable 30 days reconstituted.'],
@@ -142,7 +142,7 @@ const PRODUCT_DETAILS = {
       { title: 'Anti-Aging Research Models', description: 'Declining GH/IGF-1 axis activity is a hallmark of aging research. CJC-1295 enables controlled restoration of GH pulsatility to study somatotropic axis effects on cellular senescence markers.', image: 'images/products/wellness-research.jpg', alt: 'Anti-aging research context' },
     ],
     deepDive: [
-      { heading: 'No DAC vs. With DAC', body: 'The no-DAC variant has a shorter half-life (~30 minutes in research models) allowing discrete GH pulses. The DAC version binds serum albumin for multi-day activity — useful for different experimental designs. RENVOA CLINIC supplies the no-DAC form preferred for pulsatility research.' },
+      { heading: 'No DAC vs. With DAC', body: 'The no-DAC variant has a shorter half-life (~30 minutes in research models) allowing discrete GH pulses. The DAC version binds serum albumin for multi-day activity — useful for different experimental designs. ONYX Peptides supplies the no-DAC form preferred for pulsatility research.' },
       { heading: 'Tetrasubstitution Chemistry', body: 'Four amino acid substitutions (Ala, Gln, Ala, Arg) at positions 2, 8, 15, and 27 increase GHRH receptor binding affinity ~10× vs. native GHRH(1-29) while resisting enzymatic degradation.' },
       { heading: 'Laboratory Pairing', body: 'Nearly all modern GH axis research protocols that use CJC-1295 pair it with a ghrelin mimetic (typically ipamorelin) to simultaneously activate both GHRH and GHS pathways — mimicking the dual-input model of natural GH regulation.' },
     ],
@@ -170,7 +170,7 @@ const PRODUCT_DETAILS = {
     useCases: [
       { title: 'Complementary Pathways', description: 'BPC-157 (VEGFR2/NO) + TB-500 (actin migration) target different repair mechanisms — ideal for multi-endpoint recovery studies.', image: 'images/products/fitness-research.jpg', alt: 'Recovery research' },
     ],
-    deepDive: [{ heading: 'Why Stack?', body: 'The Recovery Stack saves $15 vs. separate purchase and ensures same-batch COAs for protocol consistency.' }],
+    deepDive: [{ heading: 'Why Stack?', body: 'The Recovery Stack pairs both compounds in one request with same-batch COAs for protocol consistency. Final bundle pricing is confirmed by our team.' }],
     studyModels: ['Tendon repair', 'Wound healing', 'Combined injury models'],
     citations: [], faq: [{ q: 'Are vials separate?', a: 'Yes — one BPC-157 5mg and one TB-500 5mg vial, each with its own COA.' }],
     related: ['bpc-157', 'tb-500'],
@@ -187,7 +187,7 @@ const PRODUCT_DETAILS = {
     ],
     deepDive: [{ heading: 'Standard Pairing', body: 'This combination is the most cited GH axis research protocol in endocrine literature.' }],
     studyModels: ['GH pulsatility', 'IGF-1 tracking', 'Pituitary culture'],
-    citations: [], faq: [{ q: 'How much do I save?', a: '$12 vs. purchasing Ipamorelin and CJC-1295 separately.' }],
+    citations: [], faq: [{ q: 'How is bundle pricing handled?', a: 'The public site shows starting-at pricing only. Submit your request and our team will confirm your bundle total before fulfillment.' }],
     related: ['ipamorelin', 'cjc-1295'],
     reconstitutionSteps: ['Reconstitute each vial separately.', 'Store at 2–8°C after reconstitution.'],
   },
@@ -207,7 +207,7 @@ const PRODUCT_DETAILS = {
     deepDive: [
       { heading: 'Discovery by Pickart', body: 'Loren Pickart isolated GHK from human plasma in 1973 and subsequently discovered that copper complexation (GHK-Cu) dramatically enhanced its biological activity. Plasma GHK levels decline with age — a finding that catalyzed decades of anti-aging research.' },
       { heading: 'Gene Expression Modulation', body: 'Microarray studies show GHK-Cu resets expression of genes involved in inflammation, oxidative stress, and matrix remodeling. It upregulates antioxidant genes while suppressing pro-inflammatory cytokine expression in dermal models.' },
-      { heading: 'High-Dose Research Format', body: 'RENVOA CLINIC supplies 50mg and 100mg vials — significantly higher than standard peptide doses — because GHK-Cu research often requires topical formulation preparation, larger assay volumes, or repeated dosing in animal models.' },
+      { heading: 'High-Dose Research Format', body: 'ONYX Peptides supplies 50mg and 100mg vials — significantly higher than standard peptide doses — because GHK-Cu research often requires topical formulation preparation, larger assay volumes, or repeated dosing in animal models.' },
     ],
     studyModels: ['Dermal fibroblast culture', 'Excisional wound model', 'Hair follicle organ culture', 'Collagen gel contraction', 'Gene expression microarray'],
     citations: [

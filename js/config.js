@@ -1,7 +1,7 @@
 window.RENVOA_CONFIG = {
-  brand: 'RENVOA CLINIC',
-  email: 'research@renvoaclinic.com',
-  supportEmail: 'support@renvoaclinic.com',
+  brand: 'ONYX Peptides',
+  email: 'research@onyx.com',
+  supportEmail: 'support@onyx.com',
   freeShippingThreshold: 150,
   coldChainShipping: 9.95,
   currency: 'USD',
@@ -17,5 +17,19 @@ window.RENVOA_CONFIG = {
   plausibleDomain: '',
 
   // Business portal password — change before production
-  adminPassword: 'renvoa2026',
+  adminPassword: 'onyx2026',
+
+  storefront: {
+    checkoutMode: 'quote',
+    hideLinePricing: true,
+    addToBagLabel: 'Add to bag',
+  },
+
+  // Shared studio cloud — admin, POS, and client portal sync via Supabase
+  cloud: {
+    enabled: true,
+    supabaseUrl: 'https://vsorpuebhngkntfvcjed.supabase.co',
+    supabaseAnonKey: 'sb_publishable_PGEKD_RPh2oiRuWVVsEXKA_iZAjMNdL',
+    workspaceId: 'onyx',
+  },
 };

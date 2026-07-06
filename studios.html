@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Onyx Studios — Private Hair Restoration</title>
+  <meta name="description" content="Rebuild confidence with private, non-invasive hair restoration at Onyx Studios. Custom men's systems, the Butterfly Bar for women, and trichologist-led care.">
+  <link rel="stylesheet" href="css/styles.css?v=60">
+  <link rel="stylesheet" href="css/studios.css?v=50">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+</head>
+<body class="studios-page" data-studio-line="clinic">
+  <nav class="global-nav scrolled" id="globalNav">
+    <div class="nav-content">
+      <a href="index.html" class="nav-logo">ONYX</a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="peptides.html">Peptides</a></li>
+        <li><a href="studios.html">Studios</a></li>
+        <li data-nav-line="clinic"><a href="#confidence">Why Onyx</a></li>
+        <li data-nav-line="clinic barber salon"><a href="#services" id="navServicesLink">Services</a></li>
+        <li data-nav-line="clinic barber salon"><a href="#book" id="navBookLink">Book</a></li>
+        <li data-nav-line="clinic barber salon portal"><a href="#portal">Client portal</a></li>
+        <li data-nav-line="clinic barber salon"><a href="#process" id="navProcessLink">Experience</a></li>
+        <li><a href="peptides.html#support">Support</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="#book" class="nav-cta-btn" id="navCtaBtn">Book now</a>
+        <button class="nav-hamburger" id="navHamburger" aria-label="Menu"><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="studio-line-switch-wrap" id="studioLineSwitchWrap" data-studio-line="clinic">
+    <div class="studio-line-switch studio-line-switch--4" id="studioLineSwitch" data-line="clinic" role="tablist" aria-label="Studio experience" style="--studio-line-count: 4">
+      <div class="studio-line-switch-track">
+        <span class="studio-line-switch-bubble" aria-hidden="true"></span>
+        <button type="button" class="studio-line-switch-btn active" data-studio-line="clinic" role="tab" aria-selected="true">Clinic</button>
+        <button type="button" class="studio-line-switch-btn" data-studio-line="barber" role="tab" aria-selected="false">Barber</button>
+        <button type="button" class="studio-line-switch-btn" data-studio-line="salon" role="tab" aria-selected="false">Salon</button>
+        <button type="button" class="studio-line-switch-btn" data-studio-line="portal" role="tab" aria-selected="false">Portal</button>
+      </div>
+    </div>
+  </div>
+
+  <header class="studio-hero studio-line-hero studio-line-hero--clinic" id="studioHeroClinic" data-line-content="clinic">
+    <div class="studio-hero-copy reveal">
+      <p class="studio-eyebrow">Clinic · Onyx Studios</p>
+      <h1>Restore your hair.<br>Rebuild your confidence.</h1>
+      <p class="studio-hero-sub">Hair loss changes how you feel in the mirror, in meetings, and in your everyday life. Work one-on-one with a certified trichologist on custom men's systems, Butterfly Weft extensions, and clinical care — natural, undetectable, built around your life.</p>
+      <div class="hero-ctas">
+        <a href="?line=clinic#book" class="btn-primary">Book clinic consultation</a>
+        <a href="#confidence" class="link-cta">Why confidence matters <span class="chevron">›</span></a>
+      </div>
+    </div>
+    <div class="studio-hero-visual studio-visual studio-visual-hero studio-visual-photo reveal" aria-hidden="true">
+      <span class="studio-hero-badge">Trichologist-led</span>
+    </div>
+  </header>
+
+  <header class="studio-hero studio-line-hero studio-line-hero--barber" id="studioHeroBarber" data-line-content="barber" hidden>
+    <div class="studio-hero-copy reveal">
+      <p class="studio-eyebrow">Barber · Onyx Studios</p>
+      <h1>Sharp lines.<br>Private chair.</h1>
+      <p class="studio-hero-sub">No waiting room, no rotation of stylists. Book cuts and grooming directly — precision lines, beard shaping, scalp care, and grey blending when you need it. System wearers and walk-ins welcome in the same private chair.</p>
+      <div class="hero-ctas">
+        <a href="?line=barber#book" class="btn-primary">Book barber visit</a>
+        <a href="#barber-services" class="link-cta">See barber menu <span class="chevron">›</span></a>
+      </div>
+    </div>
+    <div class="studio-hero-visual studio-visual studio-visual-barber studio-visual-photo reveal" aria-hidden="true">
+      <span class="studio-hero-badge studio-hero-badge--dark">Private barber chair</span>
+    </div>
+  </header>
+
+  <header class="studio-hero studio-line-hero studio-line-hero--salon" id="studioHeroSalon" data-line-content="salon" hidden>
+    <div class="studio-hero-copy reveal">
+      <p class="studio-eyebrow">Salon · Onyx Studios</p>
+      <h1>Finished hair.<br>Every visit.</h1>
+      <p class="studio-hero-sub">Salon services on their own — no restoration program required. One-on-one cuts, blowouts, full color, highlights, root work, keratin smoothing, and scalp conditioning in a studio that never feels rushed or crowded.</p>
+      <div class="hero-ctas">
+        <a href="?line=salon#book" class="btn-primary">Book salon visit</a>
+        <a href="#salon-services" class="link-cta">See salon menu <span class="chevron">›</span></a>
+      </div>
+    </div>
+    <div class="studio-hero-visual studio-visual studio-visual-salon studio-visual-photo reveal" aria-hidden="true">
+      <span class="studio-hero-badge">One-on-one styling</span>
+    </div>
+  </header>
+
+  <header class="studio-hero studio-line-hero studio-line-hero--portal" id="studioHeroPortal" data-line-content="portal" hidden>
+    <div class="studio-hero-copy reveal">
+      <p class="studio-eyebrow">Portal · Onyx Studios</p>
+      <h1>Your visits.<br>Your programs.</h1>
+      <p class="studio-hero-sub">Sign in with phone, email, and <strong>either</strong> your 6-digit access code <strong>or</strong> a password — not both. Reschedule, book prepaid visits, and track credits. A password is optional.</p>
+      <div class="hero-ctas">
+        <a href="#portal" class="btn-primary">Sign in to portal</a>
+        <a href="?line=clinic#book" class="link-cta">New here? Book first <span class="chevron">›</span></a>
+      </div>
+    </div>
+    <div class="studio-hero-visual studio-visual studio-visual-portal studio-visual-photo reveal" aria-hidden="true">
+      <span class="studio-hero-badge studio-hero-badge--portal">Client access</span>
+    </div>
+  </header>
+
+  <section class="trust-bar studio-trust studio-line-trust" data-line-content="clinic">
+    <div class="trust-bar-inner">
+      <div class="trust-item"><span class="trust-icon">✓</span> Certified trichologist</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> Custom men's systems</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> Butterfly Weft extensions</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> Clinical restoration path</div>
+    </div>
+  </section>
+
+  <section class="trust-bar studio-trust studio-line-trust" data-line-content="barber" hidden>
+    <div class="trust-bar-inner">
+      <div class="trust-item"><span class="trust-icon">✓</span> Private barber chair</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> System-friendly cuts</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> Beard &amp; grey blending</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> Direct online booking</div>
+    </div>
+  </section>
+
+  <section class="trust-bar studio-trust studio-line-trust" data-line-content="salon" hidden>
+    <div class="trust-bar-inner">
+      <div class="trust-item"><span class="trust-icon">✓</span> One stylist, one chair</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> Cuts, color &amp; keratin</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> Extension-safe styling</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> Standalone salon booking</div>
+    </div>
+  </section>
+
+  <section class="trust-bar studio-trust studio-line-trust studio-line-trust--portal" data-line-content="portal" hidden>
+    <div class="trust-bar-inner">
+      <div class="trust-item"><span class="trust-icon">✓</span> Code or password sign-in</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> Reschedule, cancel &amp; prepaid booking</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> Program &amp; credit tracking</div>
+      <div class="trust-item"><span class="trust-icon">✓</span> 48-hour change policy</div>
+    </div>
+  </section>
+
+  <section class="studio-line-intro reveal" data-line-content="clinic">
+    <div class="studio-line-intro-copy">
+      <p class="studio-eyebrow">Clinic</p>
+      <h2>Hair restoration &amp; clinical care</h2>
+      <p class="studio-section-lead">Custom men's systems, Butterfly Weft extensions, and trichologist-led treatments — all private, one-on-one.</p>
+    </div>
+    <div class="studio-split-section">
+      <a href="#mens-systems" class="studio-split-card">
+        <div class="studio-split-visual studio-visual studio-visual-men studio-visual-photo" aria-hidden="true"></div>
+        <div class="studio-split-content">
+          <p class="studio-eyebrow">Men's programs</p>
+          <h2>Hair Systems</h2>
+          <p class="studio-split-lead">Elite Skin &amp; Premium Lace Hybrid — natural hairlines that hold up close.</p>
+          <span class="link-cta light">Learn more <span class="chevron">›</span></span>
+        </div>
+      </a>
+      <a href="#butterfly-bar" class="studio-split-card studio-split-light">
+        <div class="studio-split-visual studio-visual studio-visual-women studio-visual-photo" aria-hidden="true"></div>
+        <div class="studio-split-content">
+          <p class="studio-eyebrow">Women's programs</p>
+          <h2>Butterfly Bar</h2>
+          <p class="studio-split-lead">Butterfly Weft extensions — our signature method on the Butterfly Bar.</p>
+          <span class="link-cta">Learn more <span class="chevron">›</span></span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section class="studio-line-intro studio-line-intro-barber reveal" data-line-content="barber" hidden>
+    <div class="studio-line-intro-copy">
+      <p class="studio-eyebrow">Barber menu</p>
+      <h2>Grooming built for system wearers — open to everyone.</h2>
+      <p class="studio-section-lead">Walk in for a cut or book between maintenance visits. Same private studio, same attention to detail — never a crowded shop floor.</p>
+    </div>
+    <ul class="studio-line-picks reveal" aria-label="Popular barber services">
+      <li><a href="?line=barber&amp;service=b1#book" class="studio-line-pick"><span class="studio-line-pick-label">Cut</span><strong>Haircut &amp; style</strong><span>20 min · $70</span></a></li>
+      <li><a href="?line=barber&amp;service=b-lux#book" class="studio-line-pick"><span class="studio-line-pick-label">Lux</span><strong>Lux cut</strong><span>45 min · $150 · brow/nose/ear included</span></a></li>
+      <li><a href="?line=barber&amp;service=b3#book" class="studio-line-pick"><span class="studio-line-pick-label">Combo</span><strong>Haircut + beard</strong><span>30 min · $225</span></a></li>
+      <li><a href="?line=barber&amp;service=b4#book" class="studio-line-pick"><span class="studio-line-pick-label">Color</span><strong>Grey blending</strong><span>Consult · from $225</span></a></li>
+      <li><a href="?line=barber&amp;service=b5#book" class="studio-line-pick"><span class="studio-line-pick-label">Scalp</span><strong>Treatment</strong><span>30 min · $150</span></a></li>
+      <li><a href="?line=barber&amp;service=b6#book" class="studio-line-pick"><span class="studio-line-pick-label">Full</span><strong>Color service</strong><span>Color consult · from $225</span></a></li>
+    </ul>
+    <div class="studio-line-intro-actions reveal">
+      <a href="?line=barber#book" class="btn-primary">Book barber visit</a>
+      <a href="#barber-services" class="link-cta">Full barber details <span class="chevron">›</span></a>
+    </div>
+  </section>
+
+  <section class="studio-line-intro studio-line-intro-salon reveal" data-line-content="salon" hidden>
+    <div class="studio-line-intro-copy">
+      <p class="studio-eyebrow">Salon menu</p>
+      <h2>Salon services that stand on their own.</h2>
+      <p class="studio-section-lead">You don't need to be in a restoration or extension program to book with us. Cuts, blowouts, color, highlights, keratin, and scalp care — finished before you leave the chair.</p>
+    </div>
+    <ul class="studio-line-picks reveal" aria-label="Popular salon services">
+      <li><a href="?line=salon&amp;service=ws6#book" class="studio-line-pick"><span class="studio-line-pick-label">Cut</span><strong>Haircut &amp; style</strong><span>45 min · $150</span></a></li>
+      <li><a href="?line=salon&amp;service=ws1#book" class="studio-line-pick"><span class="studio-line-pick-label">Style</span><strong>Blow out</strong><span>45 min · $75</span></a></li>
+      <li><a href="?line=salon&amp;service=ws3#book" class="studio-line-pick"><span class="studio-line-pick-label">Color</span><strong>Color + cut</strong><span>Consult · from $225</span></a></li>
+      <li><a href="?line=salon&amp;service=ws8#book" class="studio-line-pick"><span class="studio-line-pick-label">Light</span><strong>Highlights &amp; balayage</strong><span>Consult · from $275</span></a></li>
+      <li><a href="?line=salon&amp;service=ws7#book" class="studio-line-pick"><span class="studio-line-pick-label">Full</span><strong>Full color</strong><span>Consult · from $225</span></a></li>
+      <li><a href="?line=salon&amp;service=ws9#book" class="studio-line-pick"><span class="studio-line-pick-label">Root</span><strong>Root touch-up</strong><span>Consult · from $175</span></a></li>
+      <li><a href="?line=salon&amp;service=ws4#book" class="studio-line-pick"><span class="studio-line-pick-label">Smooth</span><strong>Keratin</strong><span>60 min · $200</span></a></li>
+      <li><a href="?line=salon&amp;service=ws5#book" class="studio-line-pick"><span class="studio-line-pick-label">Care</span><strong>Scalp conditioning</strong><span>45 min · $120</span></a></li>
+    </ul>
+    <div class="studio-line-intro-actions reveal">
+      <a href="?line=salon#book" class="btn-primary">Book salon visit</a>
+      <a href="#salon-services" class="link-cta">Full salon details <span class="chevron">›</span></a>
+    </div>
+  </section>
+
+  <div class="studio-journey">
+    <section class="studio-confidence-section" id="confidence" data-line-content="clinic">
+      <div class="studio-confidence-shell">
+        <header class="studio-confidence-intro reveal">
+          <p class="studio-eyebrow">Why Onyx Studios</p>
+          <h2>Confidence isn't vanity.<br><span class="studio-headline-accent">It's freedom.</span></h2>
+          <p class="studio-section-lead">When your hair doesn't feel like yours, it follows you everywhere. We built Onyx Studios around one goal: helping you feel like yourself again — without compromise.</p>
+        </header>
+
+        <figure class="studio-confidence-figure reveal">
+          <div class="studio-confidence-photo" aria-hidden="true"></div>
+          <blockquote class="studio-confidence-quote">
+            <p>"The biggest shift isn't what others notice."</p>
+            <cite>It's what you stop worrying about.</cite>
+          </blockquote>
+        </figure>
+
+        <div class="studio-pillar-grid reveal">
+          <article class="studio-pillar-card">
+            <span class="studio-pillar-num">01</span>
+            <h3>Look like yourself again</h3>
+            <p>Custom-matched color, density, texture, and hairline — so the result reads as you, not a product.</p>
+          </article>
+          <article class="studio-pillar-card">
+            <span class="studio-pillar-num">02</span>
+            <h3>Move without second-guessing</h3>
+            <p>Designed for your lifestyle — swim, train, travel. Attachment, maintenance, and durability included.</p>
+          </article>
+          <article class="studio-pillar-card">
+            <span class="studio-pillar-num">03</span>
+            <h3>Feel supported, privately</h3>
+            <p>One-on-one with a certified trichologist. No crowds, no rush — honest answers on your timeline.</p>
+          </article>
+        </div>
+
+        <ul class="studio-stat-row reveal" aria-label="Studio highlights">
+          <li><strong>1:1</strong><span>Every session</span></li>
+          <li><strong>100%</strong><span>Custom matched</span></li>
+          <li><strong>0</strong><span>Surgery required</span></li>
+          <li><strong>Private</strong><span>Studio only</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="studio-confidence-section studio-line-experience studio-line-experience--barber" id="barber-experience" data-line-content="barber" hidden>
+      <div class="studio-confidence-shell">
+        <header class="studio-confidence-intro reveal">
+          <p class="studio-eyebrow">The barber experience</p>
+          <h2>Not a shop floor.<br><span class="studio-headline-accent">A private chair.</span></h2>
+          <p class="studio-section-lead">Barber visits here feel different — one client in the studio, one clinician who knows your hairline, your system, and how you like your beard finished.</p>
+        </header>
+        <div class="studio-pillar-grid reveal">
+          <article class="studio-pillar-card">
+            <span class="studio-pillar-num">01</span>
+            <h3>System-safe cutting</h3>
+            <p>Edges, density, and part lines handled with the attachment and base in mind — not a generic barber shop routine.</p>
+          </article>
+          <article class="studio-pillar-card">
+            <span class="studio-pillar-num">02</span>
+            <h3>Beard &amp; blend work</h3>
+            <p>Trim, shape, and grey blending that matches your age and style — finished in the same visit.</p>
+          </article>
+          <article class="studio-pillar-card">
+            <span class="studio-pillar-num">03</span>
+            <h3>Between maintenance</h3>
+            <p>Book scalp treatments and refreshes between system reattachments without a full clinic consult.</p>
+          </article>
+        </div>
+        <ul class="studio-stat-row reveal" aria-label="Barber highlights">
+          <li><strong>1:1</strong><span>Private chair</span></li>
+          <li><strong>30–60</strong><span>Min services</span></li>
+          <li><strong>0</strong><span>Walk-in wait</span></li>
+          <li><strong>Open</strong><span>Non-system clients</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="studio-confidence-section studio-line-experience studio-line-experience--salon" id="salon-experience" data-line-content="salon" hidden>
+      <div class="studio-confidence-shell">
+        <header class="studio-confidence-intro reveal">
+          <p class="studio-eyebrow">The salon experience</p>
+          <h2>Salon quality.<br><span class="studio-headline-accent">Studio privacy.</span></h2>
+          <p class="studio-section-lead">No double-booked chairs or noisy floors — just you, your stylist, and time to get color, cut, and finish right before you walk out.</p>
+        </header>
+        <div class="studio-pillar-grid reveal">
+          <article class="studio-pillar-card">
+            <span class="studio-pillar-num">01</span>
+            <h3>Extension-aware styling</h3>
+            <p>Cuts and blowouts planned around wefts and bonds so length and blend stay seamless.</p>
+          </article>
+          <article class="studio-pillar-card">
+            <span class="studio-pillar-num">02</span>
+            <h3>Color with intention</h3>
+            <p>Gloss, toner, and single-process work tuned to your natural tone — not one-formula-fits-all.</p>
+          </article>
+          <article class="studio-pillar-card">
+            <span class="studio-pillar-num">03</span>
+            <h3>Dimension &amp; tone</h3>
+            <p>Highlights, balayage, root work, and gloss refreshes tuned to your base — not one-formula-fits-all.</p>
+          </article>
+        </div>
+        <ul class="studio-stat-row reveal" aria-label="Salon highlights">
+          <li><strong>1:1</strong><span>Your stylist</span></li>
+          <li><strong>45–75</strong><span>Min services</span></li>
+          <li><strong>60</strong><span>Min Butterfly install</span></li>
+          <li><strong>Standalone</strong><span>No program required</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="studio-offering studio-offering--dark" id="mens-systems" data-line-content="clinic">
+      <div class="studio-offering-layout reveal">
+        <div class="studio-offering-content">
+          <p class="studio-eyebrow">Men's hair systems</p>
+          <h2>Undetectable coverage.<br>Unshakeable confidence.</h2>
+          <p class="studio-offering-lead">Men's hair loss is personal — and public. Our custom systems disappear into your look: natural density, a hairline that holds in daylight, and a fit that stays secure all week.</p>
+          <ul class="studio-feature-list">
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Programs</span>
+              <h4>Elite Skin &amp; Premium Lace Hybrid</h4>
+              <p>Two cranial system paths — ultra-realistic skin base or breathable lace-front hybrid — each with scheduled maintenance built in.</p>
+            </li>
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Hairline</span>
+              <h4>Custom density mapping</h4>
+              <p>Age-appropriate design refined in private fittings — not a template.</p>
+            </li>
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Grooming</span>
+              <h4>Partner barber chair</h4>
+              <p>System wearers can book cuts and scalp care in our private barber line — same studio, no crowds. <a href="?line=barber#book">Book barber</a></p>
+            </li>
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Maintenance</span>
+              <h4>Reattachment &amp; refresh</h4>
+              <p>Scheduled system visits plus at-home guidance so your result holds up week after week.</p>
+            </li>
+          </ul>
+          <blockquote class="studio-pullquote">
+            <p>"I stopped thinking about it."</p>
+            <cite>The outcome we hear most — that's confidence.</cite>
+          </blockquote>
+          <a href="?line=clinic&amp;gender=men#book" class="btn-primary">Book a men's consultation</a>
+        </div>
+        <div class="studio-offering-media studio-visual studio-visual-men studio-visual-photo" aria-hidden="true">
+          <span class="studio-offering-badge">Custom fit</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="studio-offering studio-offering--light" id="butterfly-bar" data-line-content="clinic">
+      <div class="studio-offering-layout reveal">
+        <div class="studio-offering-media studio-visual studio-visual-women studio-visual-photo" aria-hidden="true">
+          <span class="studio-offering-badge">Butterfly Bar</span>
+        </div>
+        <div class="studio-offering-content">
+          <p class="studio-eyebrow">Women's Butterfly Bar</p>
+          <h2>Volume and movement<br>that feel like you.</h2>
+          <p class="studio-offering-lead">Thinning, shedding, and postpartum changes erode confidence quietly. We lead with <strong>Butterfly Weft</strong> — our signature Butterfly Bar method — plus private salon styling matched to where you need length, volume, or movement most.</p>
+          <ul class="studio-feature-list">
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Extensions</span>
+              <h4>Butterfly Weft first</h4>
+              <p><strong>Butterfly Weft</strong> is our primary recommendation — seamless blend, natural movement, and comfortable wear. Tape-in, hand-tied, genius weft, keratin bond, and beaded methods are also available when your consult calls for them.</p>
+            </li>
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Salon</span>
+              <h4>Styling between visits</h4>
+              <p>Haircuts, blowouts, full color, highlights, keratin smoothing, and scalp conditioning — so extensions always look finished.</p>
+            </li>
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Matching</span>
+              <h4>Color &amp; texture blend</h4>
+              <p>Multi-tone work for results that look beautiful in person and on camera.</p>
+            </li>
+          </ul>
+          <blockquote class="studio-pullquote">
+            <p>Stop adjusting. Stop covering. Stop avoiding the camera.</p>
+            <cite>That's the moment confidence returns.</cite>
+          </blockquote>
+          <a href="?line=clinic&amp;gender=women#book" class="btn-primary">Book a women's consultation</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="studio-offering studio-offering--dark" id="barber-services" data-line-content="barber" hidden>
+      <div class="studio-offering-layout reveal">
+        <div class="studio-offering-content">
+          <p class="studio-eyebrow">The barber chair</p>
+          <h2>Sharp cuts.<br>Zero crowds.</h2>
+          <p class="studio-offering-lead">Whether you wear a system or just want a precise cut and beard shape, our barber services happen in the same private studio — never a waiting room.</p>
+          <ul class="studio-feature-list">
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Cut</span>
+              <h4>Haircut &amp; style · $70</h4>
+              <p>20-minute precision cut in a private chair. Optional lux add-ons — brow, nose, or ear trim/wax — $30 each (+15 min when two or more).</p>
+            </li>
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Lux</span>
+              <h4>Lux cut · $150</h4>
+              <p>Full haircut plus eyebrow, nose, and ear grooming included — the finished look in one 45-minute visit.</p>
+            </li>
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Combo</span>
+              <h4>Haircut + beard · $225</h4>
+              <p>Cut and beard shape in the same session — sharp lines without a shop-floor wait.</p>
+            </li>
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Color</span>
+              <h4>Grey blending &amp; full color</h4>
+              <p>Color services reserve a private consultation — starting from $225. Cuts and scalp care book directly online.</p>
+            </li>
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Scalp</span>
+              <h4>Treatment · $150</h4>
+              <p>30-minute scalp care between system maintenance visits — or anytime you want a reset.</p>
+            </li>
+          </ul>
+          <a href="?line=barber#book" class="btn-primary">Book barber visit</a>
+        </div>
+        <div class="studio-offering-media studio-visual studio-visual-men studio-visual-photo" aria-hidden="true">
+          <span class="studio-offering-badge">Barber</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="studio-offering studio-offering--light" id="salon-services" data-line-content="salon" hidden>
+      <div class="studio-offering-layout reveal">
+        <div class="studio-offering-media studio-visual studio-visual-women studio-visual-photo" aria-hidden="true">
+          <span class="studio-offering-badge">Salon</span>
+        </div>
+        <div class="studio-offering-content">
+          <p class="studio-eyebrow">Private salon</p>
+          <h2>Finished hair,<br>every time you leave.</h2>
+          <p class="studio-offering-lead">Salon services stand on their own — you don't have to be in a restoration program to book a cut, blowout, color, or keratin treatment with us.</p>
+          <ul class="studio-feature-list">
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Cut</span>
+              <h4>Haircut &amp; style · $150</h4>
+              <p>45-minute cut with wash and blow dry — planned around wefts, bonds, and natural hair.</p>
+            </li>
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Style</span>
+              <h4>Blow out · $75</h4>
+              <p>Wash, blow dry, and finish with movement and shine — extension-aware styling in private.</p>
+            </li>
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Color</span>
+              <h4>Full menu — consults from $175</h4>
+              <p>Color + cut, full color, highlights &amp; balayage, root touch-up, and grey blending reserve a private consultation. Gloss / toner refresh books directly at $75.</p>
+            </li>
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Smoothing</span>
+              <h4>Keratin · $200</h4>
+              <p>60-minute keratin smoothing for frizz control and lasting shine between big visits.</p>
+            </li>
+            <li class="studio-feature-item">
+              <span class="studio-feature-label">Care</span>
+              <h4>Scalp treatment · $120</h4>
+              <p>45-minute conditioning and scalp care — ideal between extension maintenance appointments.</p>
+            </li>
+          </ul>
+          <a href="?line=salon#book" class="btn-primary">Book salon visit</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="studio-highlights" data-line-content="clinic">
+      <div class="studio-section-intro reveal">
+        <h2>What changes when you feel like yourself again.</h2>
+        <p class="studio-section-lead">Clinic clients come to us for restoration. They stay because of how it feels to move through the world without that weight on their shoulders.</p>
+      </div>
+      <ul class="studio-highlight-list reveal">
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Daily life</span>
+          <strong>Show up in photos</strong>
+          <p>Without angling, filters, or reaching for a hat.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Professional</span>
+          <strong>Walk into meetings</strong>
+          <p>Feeling put-together from the first handshake.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Social</span>
+          <strong>Date &amp; travel freely</strong>
+          <p>Without planning your day around your hair.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Clinical</span>
+          <strong>Honest guidance</strong>
+          <p>Trichologist-led care — never a hard sales pitch.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Relationship</span>
+          <strong>One clinician</strong>
+          <p>Who knows your history, goals, and preferences.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Results</span>
+          <strong>Leave looking like you</strong>
+          <p>Better — not obviously "worked on."</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="studio-highlights studio-highlights--barber" data-line-content="barber" hidden>
+      <div class="studio-section-intro reveal">
+        <h2>Why clients book the barber chair here.</h2>
+        <p class="studio-section-lead">Precision grooming in the same private studio as our restoration work — without the noise or wait of a traditional shop.</p>
+      </div>
+      <ul class="studio-highlight-list reveal">
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Privacy</span>
+          <strong>No crowded floor</strong>
+          <p>One client in the studio at a time — calm, focused, unhurried.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Systems</span>
+          <strong>Attachment-aware</strong>
+          <p>Cuts planned around your base, density, and hairline design.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Beard</span>
+          <strong>Sharp finish</strong>
+          <p>Beard trim, shape, and grey blend in the same visit.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Maintenance</span>
+          <strong>Between visits</strong>
+          <p>Scalp treatments and touch-ups between system reattachments.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Walk-in path</span>
+          <strong>No program needed</strong>
+          <p>Book a barber visit directly — no restoration program required.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Consistency</span>
+          <strong>Same clinician</strong>
+          <p>Your preferences remembered visit to visit.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="studio-highlights studio-highlights--salon" data-line-content="salon" hidden>
+      <div class="studio-section-intro reveal">
+        <h2>Why clients choose our private salon.</h2>
+        <p class="studio-section-lead">Salon-quality color and styling with the privacy of a studio appointment — ideal between extension visits or as a standalone treat.</p>
+      </div>
+      <ul class="studio-highlight-list reveal">
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Privacy</span>
+          <strong>One chair, one guest</strong>
+          <p>Never share the room or feel rushed for the next client.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Extensions</span>
+          <strong>Blend-first styling</strong>
+          <p>Blowouts and cuts that respect bonds and weft lines.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Color</span>
+          <strong>Tone-matched work</strong>
+          <p>Gloss, toner, and single-process color tuned to you.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Dimension</span>
+          <strong>Highlights &amp; balayage</strong>
+          <p>Custom placement and tone — planned in a private consult before lightener touches your hair.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Smoothing</span>
+          <strong>Keratin &amp; care</strong>
+          <p>Frizz control and scalp conditioning between big visits.</p>
+        </li>
+        <li class="studio-highlight-card">
+          <span class="studio-highlight-tag">Standalone</span>
+          <strong>Book on its own</strong>
+          <p>No restoration or extension program required to schedule.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="studio-services-section" id="services">
+      <div class="studio-services-panel" data-line-content="clinic">
+      <div class="studio-section-intro reveal">
+        <h2>Clinic programs under one private roof.</h2>
+        <p class="studio-section-lead">Men's systems, Butterfly Weft extensions, and trichologist-led care — each path starts with a private consultation.</p>
+      </div>
+      <div class="studio-services-grid reveal">
+        <article class="studio-service-card" data-line-content="clinic">
+          <span class="studio-service-tag">Clinic</span>
+          <h3>Men's Hair Systems</h3>
+          <p>Custom cranial programs mapped to your scalp, hairline, and daily routine.</p>
+          <ul class="studio-service-list">
+            <li>Men's Elite Skin System</li>
+            <li>Men's Premium Lace Hybrid</li>
+            <li>Pay in full &amp; quarterly plans</li>
+          </ul>
+          <p class="studio-service-outcome"><span>Confidence outcome</span> Coverage that disappears into your look.</p>
+          <a href="?line=clinic&amp;gender=men&amp;category=program#book" class="link-cta">Book men's systems <span class="chevron">›</span></a>
+        </article>
+        <article class="studio-service-card" data-line-content="clinic">
+          <span class="studio-service-tag">Clinic</span>
+          <h3>Butterfly Weft Extensions</h3>
+          <p>Butterfly Weft is our go-to for length and volume — seamless blending at the part line with a natural, comfortable finish.</p>
+          <ul class="studio-service-list">
+            <li>Butterfly Weft · signature method · from $1,199</li>
+            <li>Also: tape-in, hand-tied &amp; genius weft</li>
+            <li>Keratin bond &amp; beaded I/Y/nano options</li>
+          </ul>
+          <p class="studio-service-outcome"><span>Confidence outcome</span> Volume and flow you don't have to think about.</p>
+          <a href="?line=clinic&amp;gender=women&amp;category=womens_extensions&amp;interest=Butterfly%20Weft#book" class="link-cta">Book extensions <span class="chevron">›</span></a>
+        </article>
+        <article class="studio-service-card" data-line-content="clinic">
+          <span class="studio-service-tag">Clinical</span>
+          <h3>Trichology Consultation</h3>
+          <p>Start with a private, one-on-one scalp and hair-loss evaluation with our certified trichologist — a clear plan before you commit to a program.</p>
+          <ul class="studio-service-list">
+            <li>45-minute trichology consultation</li>
+            <li>One-time fee · $225</li>
+            <li>Scalp assessment &amp; treatment roadmap</li>
+          </ul>
+          <p class="studio-service-outcome"><span>Confidence outcome</span> Honest guidance when you need a plan, not a pitch.</p>
+          <a href="?line=clinic&amp;category=clinical&amp;service=c4#book" class="link-cta">Book trichology consult <span class="chevron">›</span></a>
+        </article>
+      </div>
+      <p class="studio-services-note reveal">Starting prices are shown when you <a href="#book">book online</a>. Every plan is built in your private consultation — because confidence starts with a fit that's actually yours.</p>
+      </div>
+
+      <div class="studio-services-panel" data-line-content="barber" hidden>
+        <div class="studio-section-intro reveal">
+          <h2>Barber menu &amp; visit types.</h2>
+          <p class="studio-section-lead">Private-chair grooming — cuts and scalp care book directly. Color reserves a consultation from $225. System wearers and walk-ins welcome.</p>
+        </div>
+        <div class="studio-services-grid studio-services-grid--single reveal">
+          <article class="studio-service-card">
+            <span class="studio-service-tag">Barber</span>
+            <h3>Barbering &amp; Grooming</h3>
+            <p>In-studio cuts, beard work, and color for system wearers between maintenance visits — or anyone who wants a precise finish without a shop floor.</p>
+            <ul class="studio-service-list">
+              <li>Lux cut · 45 min · $150 (brow/nose/ear included)</li>
+              <li>Haircut &amp; style · 20 min · $70 (+ lux add-ons $30 each)</li>
+              <li>Haircut + beard · 30 min · $225</li>
+              <li>Grey blending / full color · color consult from $225</li>
+              <li>Scalp treatment · 30 min · $150</li>
+            </ul>
+            <p class="studio-service-outcome"><span>Visit outcome</span> A polished look that matches your system — or stands on its own.</p>
+            <a href="?line=barber#book" class="link-cta">Book barber <span class="chevron">›</span></a>
+          </article>
+        </div>
+        <p class="studio-services-note reveal">Cuts and grooming book directly online. Color reserves a consultation. The $29 scheduling fee is credited toward your visit. <a href="?line=barber#book">See times</a>.</p>
+      </div>
+
+      <div class="studio-services-panel" data-line-content="salon" hidden>
+        <div class="studio-section-intro reveal">
+          <h2>Salon menu &amp; visit types.</h2>
+          <p class="studio-section-lead">Standalone styling and color — no restoration program required. One chair, one guest, finished before you leave.</p>
+        </div>
+        <div class="studio-services-grid studio-services-grid--single reveal">
+          <article class="studio-service-card">
+            <span class="studio-service-tag">Salon</span>
+            <h3>Salon &amp; Styling</h3>
+            <p>Private salon services for natural hair and extensions — cuts, blowouts, color, keratin, and scalp care.</p>
+            <ul class="studio-service-list">
+              <li>Haircut &amp; style · 45 min · $150</li>
+              <li>Blow out · 45 min · $75</li>
+              <li>Color + cut · color consult from $225</li>
+              <li>Full color · color consult from $225</li>
+              <li>Highlights &amp; balayage · color consult from $275</li>
+              <li>Root touch-up · color consult from $175</li>
+              <li>Grey blending · color consult from $225</li>
+              <li>Gloss / toner refresh · 45 min · $75</li>
+              <li>Keratin treatment · 60 min · $200</li>
+              <li>Scalp treatment &amp; conditioning · 45 min · $120</li>
+            </ul>
+            <p class="studio-service-outcome"><span>Visit outcome</span> Finished hair every time you leave the chair.</p>
+            <a href="?line=salon#book" class="link-cta">Book salon services <span class="chevron">›</span></a>
+          </article>
+        </div>
+        <p class="studio-services-note reveal">Haircuts, blowouts, keratin, and gloss refresh book directly. All other color services reserve a consultation. The $29 scheduling fee is credited at your visit. <a href="?line=salon#book">See times</a>.</p>
+      </div>
+    </section>
+  </div>
+
+  <section class="studio-book-section" id="book" data-line-content="book">
+    <div class="studio-book-inner reveal">
+      <div class="studio-book-intro studio-section-intro">
+        <p class="studio-eyebrow">Book online</p>
+        <h2 class="studio-book-headline studio-book-headline--clinic">Your confidence starts with one conversation.</h2>
+        <h2 class="studio-book-headline studio-book-headline--barber" hidden>Reserve your private barber chair.</h2>
+        <h2 class="studio-book-headline studio-book-headline--salon" hidden>Book your private salon visit.</h2>
+        <p class="studio-section-lead studio-book-lead studio-book-lead--clinic">Tell us what you&apos;re interested in, pick an open consultation time, and secure your visit with a <strong>$29 scheduling fee</strong> — non-refundable, applied as credit toward any clinic service or program. Enrolled clients can <a href="#portal">sign in</a> to schedule prepaid visits.</p>
+        <p class="studio-section-lead studio-book-lead studio-book-lead--barber" hidden>Cuts and grooming book <strong>directly</strong> — your calendar block matches the service. <strong>Color</strong> reserves a consultation (from <strong>$225</strong>). Pay the <strong>$29 scheduling fee</strong> online; it&apos;s credited at your visit.</p>
+        <p class="studio-section-lead studio-book-lead studio-book-lead--salon" hidden>Haircuts, blowouts, keratin, and gloss refresh book <strong>directly</strong>. <strong>Color services</strong> reserve a consultation (from <strong>$175</strong>). Pay the <strong>$29 scheduling fee</strong> — credited toward your visit. No program required.</p>
+      </div>
+      <div id="studioBookRoot" class="studio-book-root" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="studio-portal-section" id="portal" data-line-content="portal">
+    <div class="studio-portal-inner reveal">
+      <div class="studio-section-intro">
+        <p class="studio-eyebrow">Client portal</p>
+        <h2>Your appointments &amp; programs — in one place.</h2>
+        <p class="studio-section-lead">Sign in with phone, email, and <strong>one credential</strong> — your 6-digit access code <strong>or</strong> a portal password. Complete intake forms before your visit, reschedule or cancel free when your visit is more than <strong>48 hours</strong> away, and manage prepaid programs — within 48 hours, a <strong>$50 fee</strong> applies to changes.</p>
+      </div>
+      <div id="studioPortalRoot" class="studio-portal-root" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="studio-process-section" id="process" data-line-content="clinic">
+    <div class="studio-section-intro reveal">
+      <h2>How we build your confidence — step by step.</h2>
+      <p class="studio-section-lead">No pressure. No crowds. Just a clear path from where you are now to a result you'll trust every morning.</p>
+    </div>
+    <div class="studio-process-timeline reveal">
+      <div class="studio-process-grid">
+        <div class="studio-process-step">
+          <span class="studio-process-num">01</span>
+          <h3>Listen first</h3>
+          <p>We start with what's actually bothering you — thinning, coverage, maintenance fears, lifestyle. A certified trichologist assesses your scalp before recommending anything.</p>
+        </div>
+        <div class="studio-process-step">
+          <span class="studio-process-num">02</span>
+          <h3>Design around you</h3>
+          <p>Color, density, base type, and hairline mapped to your features and routine. You see the plan before you commit.</p>
+        </div>
+        <div class="studio-process-step">
+          <span class="studio-process-num">03</span>
+          <h3>Fit in private</h3>
+          <p>One-on-one fittings in a calm studio — refined until it feels right in real life, not just under studio lights.</p>
+        </div>
+        <div class="studio-process-step">
+          <span class="studio-process-num">04</span>
+          <h3>Support long-term</h3>
+          <p>Maintenance, refresh visits, and at-home guidance keep results consistent — confidence that lasts past day one.</p>
+        </div>
+      </div>
+    </div>
+    <div class="studio-process-visual studio-visual studio-visual-process studio-visual-photo reveal" aria-hidden="true"></div>
+  </section>
+
+  <section class="studio-process-section studio-process-section--barber" id="process-barber" data-line-content="barber" hidden>
+    <div class="studio-section-intro reveal">
+      <h2>How a barber visit works here.</h2>
+      <p class="studio-section-lead">Quick to book, private when you arrive — grooming that respects your system and your schedule.</p>
+    </div>
+    <div class="studio-process-timeline reveal">
+      <div class="studio-process-grid studio-process-grid--3">
+        <div class="studio-process-step">
+          <span class="studio-process-num">01</span>
+          <h3>Book online</h3>
+          <p>Choose your service and reserve a chair time. Cuts and grooming book directly; color reserves a consultation. The $29 scheduling fee is credited at your visit.</p>
+        </div>
+        <div class="studio-process-step">
+          <span class="studio-process-num">02</span>
+          <h3>Arrive solo</h3>
+          <p>One client in the studio. We review your cut, beard, and any system edges before we start.</p>
+        </div>
+        <div class="studio-process-step">
+          <span class="studio-process-num">03</span>
+          <h3>Leave finished</h3>
+          <p>Sharp lines, blended grey if needed, and a look that holds until your next visit.</p>
+        </div>
+      </div>
+    </div>
+    <div class="studio-process-visual studio-visual studio-visual-barber studio-visual-photo reveal" aria-hidden="true"></div>
+  </section>
+
+  <section class="studio-process-section studio-process-section--salon" id="process-salon" data-line-content="salon" hidden>
+    <div class="studio-section-intro reveal">
+      <h2>How a salon visit works here.</h2>
+      <p class="studio-section-lead">Salon-quality finish without the salon floor — color, cut, and style in one private appointment.</p>
+    </div>
+    <div class="studio-process-timeline reveal">
+      <div class="studio-process-grid studio-process-grid--3">
+        <div class="studio-process-step">
+          <span class="studio-process-num">01</span>
+          <h3>Choose your service</h3>
+          <p>Haircuts, blowouts, keratin, and gloss refresh book directly. Color services reserve a private consultation — pick a time that fits your calendar.</p>
+        </div>
+        <div class="studio-process-step">
+          <span class="studio-process-num">02</span>
+          <h3>Plan in private</h3>
+          <p>One guest, one chair. We review length, tone, and extension placement before color or cutting starts.</p>
+        </div>
+        <div class="studio-process-step">
+          <span class="studio-process-num">03</span>
+          <h3>Walk out done</h3>
+          <p>Wash, cut, color, and finish in one chair — no hand-off to another stylist mid-visit.</p>
+        </div>
+      </div>
+    </div>
+    <div class="studio-process-visual studio-visual studio-visual-salon studio-visual-photo reveal" aria-hidden="true"></div>
+  </section>
+
+  <section class="studio-inquire-section" id="inquire" data-line-content="book">
+    <div class="studio-inquire-inner reveal">
+      <div class="studio-inquire-copy">
+        <p class="studio-eyebrow">Get started</p>
+        <h2>Take the first step — privately.</h2>
+        <p class="studio-section-lead studio-inquire-lead studio-inquire-lead--clinic">Whether you're exploring options or ready to move forward, tell us what you're hoping to feel again. We'll reach out to schedule a confidential consultation — no obligation, no pressure.</p>
+        <p class="studio-section-lead studio-inquire-lead studio-inquire-lead--barber" hidden>Prefer a call before you book? Tell us what you're after — cuts, lux grooming, or color — and we'll reach out to find a chair time. No obligation.</p>
+        <p class="studio-section-lead studio-inquire-lead studio-inquire-lead--salon" hidden>Questions before you book salon services? Share what you're hoping for — cut, color, keratin, or blowouts — and we'll follow up privately. No program required.</p>
+        <ul class="studio-inquire-points">
+          <li>Confidential, one-on-one follow-up</li>
+          <li>Trichologist-led recommendations</li>
+          <li>No obligation to book</li>
+        </ul>
+        <p class="studio-inquire-fine">Or <a href="#book">book online</a> anytime — starting at a $29 scheduling fee applied as credit.</p>
+      </div>
+      <form class="studio-inquire-form" id="studioInquireForm" novalidate>
+        <div class="studio-inquire-fields">
+          <label class="studio-inquire-field studio-inquire-field-full">
+            <span class="studio-inquire-label">Full name</span>
+            <input type="text" id="studioName" name="name" required autocomplete="name" placeholder="Your name">
+          </label>
+          <div class="studio-inquire-row">
+            <label class="studio-inquire-field">
+              <span class="studio-inquire-label">Email</span>
+              <input type="email" id="studioEmail" name="email" required autocomplete="email" placeholder="you@email.com" inputmode="email">
+            </label>
+            <label class="studio-inquire-field">
+              <span class="studio-inquire-label">Phone</span>
+              <input type="tel" id="studioPhone" name="phone" required autocomplete="tel" placeholder="(904) 555-0100" inputmode="tel">
+            </label>
+          </div>
+          <fieldset class="studio-inquire-interest" id="studioInquireInterest">
+            <legend class="studio-inquire-label">I'm interested in</legend>
+            <div class="studio-inquire-interest-grid" role="radiogroup" aria-label="Area of interest">
+              <label class="studio-inquire-chip">
+                <input type="radio" name="studioInterest" value="general" checked>
+                <span>Clinic consultation</span>
+              </label>
+              <label class="studio-inquire-chip">
+                <input type="radio" name="studioInterest" value="men">
+                <span>Men's hair systems</span>
+              </label>
+              <label class="studio-inquire-chip">
+                <input type="radio" name="studioInterest" value="women">
+                <span>Women's Butterfly Bar</span>
+              </label>
+              <label class="studio-inquire-chip">
+                <input type="radio" name="studioInterest" value="clinical">
+                <span>Trichology consultation</span>
+              </label>
+              <label class="studio-inquire-chip">
+                <input type="radio" name="studioInterest" value="barber">
+                <span>Barber &amp; grooming</span>
+              </label>
+              <label class="studio-inquire-chip">
+                <input type="radio" name="studioInterest" value="salon">
+                <span>Salon &amp; color</span>
+              </label>
+            </div>
+          </fieldset>
+          <label class="studio-inquire-field studio-inquire-field-full">
+            <span class="studio-inquire-label">Message <em class="studio-inquire-optional">Optional</em></span>
+            <textarea id="studioMessage" name="message" rows="3" placeholder="Anything we should know before we call?"></textarea>
+          </label>
+          <button type="submit" class="studio-inquire-submit">Submit request</button>
+        </div>
+      </form>
+      <div class="studio-inquire-success" id="studioInquireSuccess" hidden>
+        <div class="studio-inquire-success-icon" aria-hidden="true">✓</div>
+        <p class="studio-inquire-success-title">Request received</p>
+        <p class="studio-inquire-success-text">Our team will contact you within one business day to schedule your consultation.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="global-footer">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <h4>Onyx Studios</h4>
+        <ul>
+          <li data-footer-line="clinic"><a href="#confidence">Why Onyx</a></li>
+          <li data-footer-line="clinic barber salon"><a href="#services">Services</a></li>
+          <li data-footer-line="clinic barber salon"><a href="#process">Experience</a></li>
+          <li data-footer-line="clinic barber salon"><a href="#book">Book appointment</a></li>
+          <li><a href="#portal">Client portal</a></li>
+          <li data-footer-line="clinic barber salon"><a href="#inquire">Request consultation</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>ONYX Peptides</h4>
+        <ul>
+          <li><a href="peptides.html#peptides">Research peptides</a></li>
+          <li><a href="coa.html">COA Lookup</a></li>
+          <li><a href="wholesale.html">Wholesale</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="mailto:hello@onyxstudios.com">hello@onyxstudios.com</a></li>
+          <li><a href="tel:+19045550142">(904) 555-0142</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="legal/privacy.html">Privacy</a></li>
+          <li><a href="legal/terms.html">Terms</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>Copyright © 2026 Onyx Studios · ONYX Peptides</p>
+      <div class="footer-legal">
+        <a href="peptides.html">Peptide store</a>
+        <a href="admin/index.html">Business Portal</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>window.ONYX_STUDIO_PUBLIC_BOOKING = true;</script>
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/studio-storage.js?v=1"></script>
+  <script src="js/studios-pricing.js"></script>
+  <script src="js/studio-extension-data.js"></script>
+  <script src="js/studio-visit-flow.js?v=38"></script>
+  <script src="js/studio-admin.js?v=85"></script>
+  <script src="js/studio-public-booking.js?v=56"></script>
+  <script src="js/studio-client-portal.js?v=56"></script>
+  <script src="js/studios.js?v=45"></script>
+</body>
+</html>

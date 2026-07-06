@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Research Peptide — RENVOA CLINIC</title>
+  <title>Research Peptide — ONYX Peptides</title>
   <meta name="description" content="Pharmaceutical-grade research peptides. HPLC verified. Research use only.">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="canonical" id="canonicalLink" href="">
@@ -16,13 +16,13 @@
     const id = new URLSearchParams(location.search).get('p') || new URLSearchParams(location.search).get('id');
     if (id && PRODUCTS[id]) {
       const p = PRODUCTS[id];
-      document.title = `${p.name} — RENVOA CLINIC`;
+      document.title = `${p.name} — ONYX Peptides`;
       document.querySelector('meta[name="description"]').content =
         `${p.tagline}. ${p.purity} purity. HPLC verified. Research use only.`;
       document.getElementById('canonicalLink').href = location.origin + location.pathname + '?p=' + id;
-      location.replace('index.html?product=' + id);
+      location.replace('peptides.html?product=' + id);
     } else {
-      location.replace('index.html');
+      location.replace('peptides.html');
     }
   </script>
 </body>

@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>COA Lookup — RENVOA CLINIC</title>
-  <meta name="description" content="Look up Certificates of Analysis by batch number for RENVOA CLINIC research peptides.">
+  <title>COA Lookup — ONYX Peptides</title>
+  <meta name="description" content="Look up Certificates of Analysis by batch number for ONYX Peptides research peptides.">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="page-body">
   <nav class="global-nav scrolled">
     <div class="nav-content">
-      <a href="index.html" class="nav-logo">RENVOA CLINIC</a>
-      <a href="index.html#quality" class="link-cta">Testing Protocol</a>
+      <a href="index.html" class="nav-logo">ONYX</a>
+      <a href="peptides.html#quality" class="link-cta">Testing Protocol</a>
     </div>
   </nav>
   <main class="page-main coa-page">
@@ -49,7 +49,7 @@
       const data = COA_DATABASE[key] || COA_DATABASE[input.value.trim()];
       if (!data) {
         result.hidden = false;
-        result.innerHTML = '<p class="coa-error">Batch not found. Check the number on your vial label or contact support@renvoaclinic.com.</p>';
+        result.innerHTML = '<p class="coa-error">Batch not found. Check the number on your vial label or contact support@onyx.com.</p>';
         return;
       }
       result.hidden = false;

@@ -2,6 +2,7 @@
   'use strict';
 
   const C = window.RenvoaCart;
+  const SF = window.RenvoaStorefront;
   let cart = C.getCart();
   let selectedModalSize = null;
 
@@ -42,9 +43,9 @@
   let activeGoal = null;
 
   const TILE_CONFIG = {
-    'tb-500':       { theme: 'tile-dark',     visual: 'vial-tb',   badge: 'Popular', tagline: 'Thymosin Beta-4 fragment.<br>5mg lyophilized.', light: true, price: 65 },
-    'recovery-stack': { theme: 'tile-gradient', visual: 'vial-bpc', badge: 'Save $15', tagline: 'BPC-157 5mg + TB-500 5mg.<br>Recovery bundle.', light: true, price: 99 },
-    'gh-stack':     { theme: 'tile-accent',   visual: 'vial-ipa',  badge: 'Bundle', tagline: 'Ipamorelin + CJC-1295.<br>GH axis stack.', light: true, price: 72 },
+    'tb-500':       { theme: 'tile-dark',     visual: 'vial-tb',   badge: 'Popular', tagline: 'Thymosin Beta-4 fragment.<br>5mg lyophilized.', light: true },
+    'recovery-stack': { theme: 'tile-gradient', visual: 'vial-bpc', badge: 'Bundle', tagline: 'BPC-157 5mg + TB-500 5mg.<br>Recovery bundle.', light: true },
+    'gh-stack':     { theme: 'tile-accent',   visual: 'vial-ipa',  badge: 'Bundle', tagline: 'Ipamorelin + CJC-1295.<br>GH axis stack.', light: true },
     'bpc-157':      { theme: 'tile-light',    visual: 'vial-bpc',  tagline: 'Body Protection Compound.<br>5mg &amp; 10mg options.' },
     'semaglutide':  { theme: 'tile-gradient', visual: 'vial-sema', badge: 'New', tagline: 'GLP-1 receptor agonist.<br>Research-grade 2mg.', light: true },
     'ipamorelin':   { theme: 'tile-light',    visual: 'vial-ipa',  tagline: 'Selective GH secretagogue.<br>2mg per vial.' },
@@ -86,18 +87,21 @@
     }
 
     cartFooter.hidden = false;
-    cartSubtotal.textContent = formatPrice(getCartTotal());
+    cartSubtotal.textContent = SF.shouldHideLinePricing() ? 'Quoted at checkout' : formatPrice(getCartTotal());
 
     cartItems.innerHTML = cart.map((item) => {
       const p = PRODUCTS[item.id];
       if (!p) return '';
       const sizeKey = item.size ? ` data-size="${item.size}"` : '';
+      const priceLine = SF.shouldHideLinePricing()
+        ? '<div class="cart-item-price cart-item-quote">Pricing confirmed at checkout</div>'
+        : `<div class="cart-item-price">${formatPrice(C.getItemPrice(item))}</div>`;
       return `
         <div class="cart-item" data-id="${item.id}"${sizeKey}>
           <div class="cart-item-visual" style="background:linear-gradient(180deg,${p.color}33,${p.color}11)"></div>
           <div class="cart-item-info">
             <div class="cart-item-name">${C.getItemLabel(item)}</div>
-            <div class="cart-item-price">${formatPrice(C.getItemPrice(item))}</div>
+            ${priceLine}
             <div class="cart-item-qty">
               <button class="qty-btn" data-action="decrease" data-id="${item.id}" data-size="${item.size || ''}">−</button>
               <span>${item.qty}</span>
@@ -120,7 +124,7 @@
   function buildSizeSelector(p, selected) {
     if (!p.variants || Object.keys(p.variants).length <= 1) return '';
     const opts = Object.entries(p.variants)
-      .map(([key, v]) => `<option value="${key}"${key === selected ? ' selected' : ''}>${v.label} — ${formatPrice(v.price)}</option>`)
+      .map(([key, v]) => `<option value="${key}"${key === selected ? ' selected' : ''}>${v.label}</option>`)
       .join('');
     return `<div class="modal-size-select"><label for="modalSize">Select size</label><select id="modalSize">${opts}</select></div>`;
   }
@@ -132,13 +136,13 @@
 
   function updateModalPrice(p) {
     const size = getModalSelectedSize() || p.defaultVariant;
-    const v = C.getVariant(p, size);
     const priceEl = $('#modalLivePrice');
     const addBtn = $('#modalAddBtn');
-    if (priceEl && v) priceEl.textContent = formatPrice(v.price);
-    if (addBtn && v) addBtn.textContent = `Add to Bag — ${formatPrice(v.price)}`;
+    const label = SF.formatStartingAt(p);
+    if (priceEl) priceEl.textContent = label;
+    if (addBtn) addBtn.textContent = SF.publicCtaLabel();
     const sticky = $('#modalStickyPrice');
-    if (sticky && v) sticky.textContent = formatPrice(v.price);
+    if (sticky) sticky.textContent = label;
     selectedModalSize = size;
   }
 
@@ -232,7 +236,7 @@
       .filter((rid) => PRODUCTS[rid])
       .map((rid) => {
         const r = PRODUCTS[rid];
-        return `<button type="button" class="modal-related-chip" data-detail="${rid}" style="--chip-color:${r.color}">${r.name} · From ${formatPrice(r.price)}</button>`;
+        return `<button type="button" class="modal-related-chip" data-detail="${rid}" style="--chip-color:${r.color}">${r.name}</button>`;
       })
       .join('');
 
@@ -244,7 +248,7 @@
           <p class="modal-hero-eyebrow">${p.heroCaption || 'Laboratory research'}</p>
           <h2>${p.name}</h2>
           <p class="modal-tagline">${p.tagline}</p>
-          <p class="modal-price" id="modalLivePrice">From ${formatPrice(p.price)}</p>
+          <p class="modal-price" id="modalLivePrice">${SF.formatStartingAt(p)}</p>
           ${p.currentLot ? `<p class="modal-lot">Current lot: <a href="coa.html?batch=${p.currentLot}" class="modal-lot-link">${p.currentLot}</a> · ${p.lotPurity || p.purity} purity</p>` : ''}
           ${categoryLabels ? `<div class="modal-categories">${categoryLabels}</div>` : ''}
         </div>
@@ -292,7 +296,7 @@
             <p class="modal-gallery-intro">How researchers use ${p.name} across laboratory and clinical research settings.</p>
             <div class="modal-gallery">${gallery}</div>
             <div class="modal-gallery-disclaimer">
-              <strong>Research use only.</strong> Images depict research contexts and laboratory applications. RENVOA CLINIC products are not intended for human consumption or self-administration.
+              <strong>Research use only.</strong> Images depict research contexts and laboratory applications. ONYX Peptides products are not intended for human consumption or self-administration.
             </div>
           </div>
 
@@ -339,13 +343,13 @@
 
         <div class="modal-actions">
           ${buildSizeSelector(p, p.defaultVariant)}
-          <button class="btn-primary" id="modalAddBtn" data-add="${p.id}">Add to Bag — ${formatPrice(p.price)}</button>
+          <button class="btn-primary" id="modalAddBtn" data-add="${p.id}">${SF.publicCtaLabel()}</button>
           <a href="product.html?p=${p.id}" class="btn-secondary">Share product</a>
         </div>
       </div>
       <div class="modal-sticky-bar" id="modalStickyBar">
         <span class="modal-sticky-name">${p.name}</span>
-        <span class="modal-sticky-price" id="modalStickyPrice">${formatPrice(p.price)}</span>
+        <span class="modal-sticky-price" id="modalStickyPrice">${SF.formatStartingAt(p)}</span>
         <button class="btn-primary btn-sm" data-add="${p.id}">Add to Bag</button>
       </div>
     `;
@@ -380,9 +384,9 @@
           ${badge}
           <h3>${p.name}</h3>
           <p class="tile-tagline">${cfg.tagline}</p>
-          <p class="tile-price">From ${formatPrice(cfg.price || p.price)}</p>
+          <p class="tile-price">${SF.formatStartingAt(p)}</p>
           <div class="tile-ctas">
-            <a href="#" class="${ctaClass}" data-add="${pid}">Buy <span class="chevron">›</span></a>
+            <a href="#" class="${ctaClass}" data-add="${pid}">${SF.publicCtaLabel()} <span class="chevron">›</span></a>
             <a href="#" class="${ctaClass}" data-detail="${pid}">Learn more <span class="chevron">›</span></a>
           </div>
         </div>
@@ -481,7 +485,7 @@
         (p) => `
       <div class="search-result-item" data-detail="${p.id}">
         <span class="search-result-name">${p.name}</span>
-        <span class="search-result-price">From ${formatPrice(p.price)}</span>
+        <span class="search-result-price">${SF.formatStartingAt(p)}</span>
       </div>`
       )
       .join('');
@@ -567,9 +571,7 @@
   const revealObserver = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
+        entry.target.classList.toggle('visible', entry.isIntersecting);
       });
     },
     { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
@@ -621,7 +623,11 @@
     if (heroEyebrow) heroEyebrow.textContent = s.eyebrow;
     heroTitle.innerHTML = s.title;
     if (heroSub) heroSub.innerHTML = s.sub + '<br>For in-vitro laboratory research only.';
-    if (heroBuy) { heroBuy.dataset.add = s.id; heroBuy.innerHTML = `Buy from $${s.price} <span class="chevron">›</span>`; }
+    if (heroBuy) {
+      const hp = PRODUCTS[s.id];
+      heroBuy.dataset.add = s.id;
+      heroBuy.innerHTML = hp ? `${SF.formatStartingAt(hp)} <span class="chevron">›</span>` : `Shop <span class="chevron">›</span>`;
+    }
     if (heroLearn) heroLearn.dataset.detail = s.id;
     if (heroLabel) heroLabel.textContent = s.label;
     heroDots.forEach((d, j) => d.classList.toggle('active', j === i));

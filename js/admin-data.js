@@ -8,7 +8,17 @@ window.RenvoaAdmin = (function () {
     crm: 'renvoa-crm-contacts',
     session: 'renvoa-admin-session',
     seeded: 'renvoa-admin-seeded',
+    plAdjustments: 'renvoa-pl-adjustments',
+    plModel: 'renvoa-pl-model',
   };
+
+  const PL_ADJUSTMENT_SOURCES = ['all', 'peptide', 'clinic'];
+  const PL_ADJUSTMENT_TYPES = [
+    { id: 'revenue', label: 'Revenue' },
+    { id: 'expense', label: 'Expense' },
+    { id: 'cogs', label: 'COGS / delivery' },
+    { id: 'other', label: 'Other (EBITDA)' },
+  ];
 
   const CRM_STAGES = [
     { id: 'lead', label: 'Lead', color: '#86868b' },
@@ -42,14 +52,112 @@ window.RenvoaAdmin = (function () {
     'bac-water': 4,
   };
 
-  const PL_MODEL = {
+  const DEFAULT_PL_MODEL = {
     monthlyFixedOverhead: 1850,
     marketingPct: 0.25,
     processingRate: 0.029,
     processingFee: 0.30,
     refundRate: 0.03,
     outboundShipCost: 12,
+    clinicServiceCostRate: 0.18,
+    clinicMarketingPct: 0.08,
+    clinicOverheadShare: 0.45,
   };
+
+  function getPlModel() {
+    return { ...DEFAULT_PL_MODEL, ...read(KEYS.plModel, {}) };
+  }
+
+  function savePlModel(patch) {
+    const next = { ...getPlModel(), ...patch };
+    write(KEYS.plModel, next);
+    return next;
+  }
+
+  function getPlAdjustments() {
+    return read(KEYS.plAdjustments, []).sort((a, b) => `${b.date}`.localeCompare(`${a.date}`));
+  }
+
+  function getPlAdjustment(id) {
+    return getPlAdjustments().find((a) => a.id === id) || null;
+  }
+
+  function addPlAdjustment(data) {
+    const list = getPlAdjustments();
+    const entry = {
+      id: 'PLA-' + Date.now().toString(36).toUpperCase(),
+      date: data.date || todayISO(),
+      label: data.label || 'Adjustment',
+      amount: Number(data.amount) || 0,
+      type: data.type || 'other',
+      source: PL_ADJUSTMENT_SOURCES.includes(data.source) ? data.source : 'all',
+      notes: data.notes || '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    list.unshift(entry);
+    write(KEYS.plAdjustments, list);
+    return entry;
+  }
+
+  function updatePlAdjustment(id, patch) {
+    const list = getPlAdjustments();
+    const idx = list.findIndex((a) => a.id === id);
+    if (idx === -1) return null;
+    list[idx] = {
+      ...list[idx],
+      ...patch,
+      amount: patch.amount != null ? Number(patch.amount) : list[idx].amount,
+      updatedAt: new Date().toISOString(),
+    };
+    write(KEYS.plAdjustments, list);
+    return list[idx];
+  }
+
+  function deletePlAdjustment(id) {
+    const list = getPlAdjustments().filter((a) => a.id !== id);
+    write(KEYS.plAdjustments, list);
+  }
+
+  function plAdjustmentAppliesToSource(adj, activeSource) {
+    if (!adj) return false;
+    if (adj.source === 'all') return true;
+    if (activeSource === 'combined') return true;
+    return adj.source === activeSource;
+  }
+
+  function getPlAdjustmentsInRange(startIso, endIso, activeSource) {
+    return getPlAdjustments().filter((a) => {
+      const d = (a.date || '').slice(0, 10);
+      if (!d || d < startIso || d > endIso) return false;
+      return plAdjustmentAppliesToSource(a, activeSource);
+    });
+  }
+
+  function summarizePlAdjustments(adjustments) {
+    const revenue = adjustments.filter((a) => a.type === 'revenue').reduce((s, a) => s + a.amount, 0);
+    const expense = adjustments.filter((a) => a.type === 'expense').reduce((s, a) => s + a.amount, 0);
+    const cogs = adjustments.filter((a) => a.type === 'cogs').reduce((s, a) => s + a.amount, 0);
+    const other = adjustments.filter((a) => a.type === 'other').reduce((s, a) => s + a.amount, 0);
+    const net = adjustments.reduce((s, a) => s + a.amount, 0);
+    return { revenue, expense, cogs, other, net, count: adjustments.length };
+  }
+
+  function applyPlAdjustmentsToSummary(summary, startIso, endIso, activeSource) {
+    const adjustments = getPlAdjustmentsInRange(startIso, endIso, activeSource);
+    const adj = summarizePlAdjustments(adjustments);
+    const baseEbitda = summary.ebitda || 0;
+    const adjustedEbitda = baseEbitda + adj.net;
+    return {
+      ...summary,
+      plAdjustments: adjustments,
+      adjustmentsSummary: adj,
+      adjustmentsNet: adj.net,
+      ebitdaBeforeAdjustments: baseEbitda,
+      ebitda: adjustedEbitda,
+      adjustedEbitda,
+    };
+  }
 
   function read(key, fallback) {
     try {
@@ -75,8 +183,39 @@ window.RenvoaAdmin = (function () {
     });
   }
 
+  function readSessionRaw() {
+    try {
+      return sessionStorage.getItem(KEYS.session) || localStorage.getItem(KEYS.session);
+    } catch {
+      try {
+        return localStorage.getItem(KEYS.session);
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  function writeSessionRaw(value) {
+    try {
+      sessionStorage.setItem(KEYS.session, value);
+      return true;
+    } catch {
+      try {
+        localStorage.setItem(KEYS.session, value);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  function clearSessionRaw() {
+    try { sessionStorage.removeItem(KEYS.session); } catch { /* ignore */ }
+    try { localStorage.removeItem(KEYS.session); } catch { /* ignore */ }
+  }
+
   function isAuthed() {
-    const session = sessionStorage.getItem(KEYS.session);
+    const session = readSessionRaw();
     if (!session) return false;
     try {
       const data = JSON.parse(session);
@@ -88,9 +227,13 @@ window.RenvoaAdmin = (function () {
   }
 
   function login(password) {
-    const expected = RENVOA_CONFIG?.adminPassword || 'renvoa2026';
-    if ((password || '').trim() !== expected) return false;
-    sessionStorage.setItem(KEYS.session, JSON.stringify({ at: Date.now() }));
+    const cfg = window.RENVOA_CONFIG;
+    const expected = String(cfg?.adminPassword || 'onyx2026').trim().toLowerCase();
+    const attempt = String(password || '').trim().toLowerCase();
+    if (!attempt || attempt !== expected) return false;
+    if (!writeSessionRaw(JSON.stringify({ at: Date.now() }))) {
+      throw new Error('Could not save login session. Allow site storage and try again.');
+    }
     try {
       ensureSeedData();
     } catch (err) {
@@ -100,7 +243,7 @@ window.RenvoaAdmin = (function () {
   }
 
   function logout() {
-    sessionStorage.removeItem(KEYS.session);
+    clearSessionRaw();
   }
 
   function getOrders() {
@@ -116,6 +259,7 @@ window.RenvoaAdmin = (function () {
     const enriched = {
       ...order,
       status: 'new',
+      pricingStatus: order.pricingStatus || (order.total != null ? 'confirmed' : 'pending'),
       tracking: '',
       internalNotes: '',
       statusHistory: [{ status: 'new', at: order.date || new Date().toISOString(), note: 'Order placed' }],
@@ -123,12 +267,15 @@ window.RenvoaAdmin = (function () {
     orders.unshift(enriched);
     saveOrders(orders);
 
+    const isQuote = enriched.pricingStatus === 'pending';
     addMessage({
       customerEmail: order.customer?.email,
       customerName: order.customer?.name,
       orderId: order.id,
-      subject: `Order confirmation — ${order.id}`,
-      body: `Hi ${order.customer?.name || 'there'},\n\nThank you for your RENVOA CLINIC order (${order.id}). We're preparing your shipment and will send tracking once it leaves our facility.\n\n— RENVOA CLINIC`,
+      subject: isQuote ? `Order request received — ${order.id}` : `Order confirmation — ${order.id}`,
+      body: isQuote
+        ? `Hi ${order.customer?.name || 'there'},\n\nWe've received your order request (${order.id}). Our team will confirm final pricing and send payment and shipping details shortly.\n\n— ONYX Peptides`
+        : `Hi ${order.customer?.name || 'there'},\n\nThank you for your ONYX Peptides order (${order.id}). We're preparing your shipment and will send tracking once it leaves our facility.\n\n— ONYX Peptides`,
       direction: 'outbound',
       auto: true,
     });
@@ -194,7 +341,7 @@ window.RenvoaAdmin = (function () {
   function orderCogs(order) {
     let total = (order.items || []).reduce((sum, item) => sum + getItemCogs(item), 0);
     if (order.bacWater) total += LANDED_COGS['bac-water'];
-    total += PL_MODEL.outboundShipCost;
+    total += getPlModel().outboundShipCost;
     return total;
   }
 
@@ -203,46 +350,224 @@ window.RenvoaAdmin = (function () {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   }
 
+  function todayISO() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function shiftISODate(iso, days) {
+    const d = new Date((iso || todayISO()) + 'T12:00:00');
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function startOfMonthISO(iso = todayISO()) {
+    const d = new Date(iso + 'T12:00:00');
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  }
+
+  function endOfMonthISO(iso = todayISO()) {
+    const d = new Date(iso + 'T12:00:00');
+    const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    return end.toISOString().slice(0, 10);
+  }
+
+  function daysInclusive(startIso, endIso) {
+    const start = new Date(startIso + 'T12:00:00');
+    const end = new Date(endIso + 'T12:00:00');
+    return Math.max(1, Math.round((end - start) / 86400000) + 1);
+  }
+
+  function formatRangeLabel(startIso, endIso) {
+    const opts = { month: 'short', day: 'numeric', year: 'numeric' };
+    const start = new Date(startIso + 'T12:00:00').toLocaleDateString('en-US', opts);
+    const end = new Date(endIso + 'T12:00:00').toLocaleDateString('en-US', opts);
+    return startIso === endIso ? start : `${start} – ${end}`;
+  }
+
+  function resolveFinanceRange(preset, customStart, customEnd) {
+    const today = todayISO();
+    const presets = {
+      mtd: { startDate: startOfMonthISO(today), endDate: today, label: 'Month to date' },
+      last_month: {
+        startDate: startOfMonthISO(shiftISODate(startOfMonthISO(today), -1)),
+        endDate: endOfMonthISO(shiftISODate(startOfMonthISO(today), -1)),
+        label: 'Last month',
+      },
+      last_7_days: { startDate: shiftISODate(today, -6), endDate: today, label: 'Last 7 days' },
+      last_30_days: { startDate: shiftISODate(today, -29), endDate: today, label: 'Last 30 days' },
+      last_90_days: { startDate: shiftISODate(today, -89), endDate: today, label: 'Last 90 days' },
+      ytd: { startDate: `${today.slice(0, 4)}-01-01`, endDate: today, label: 'Year to date' },
+      all_time: { startDate: '2000-01-01', endDate: today, label: 'All time' },
+    };
+    if (preset === 'custom' && customStart && customEnd) {
+      const startDate = customStart <= customEnd ? customStart : customEnd;
+      const endDate = customStart <= customEnd ? customEnd : customStart;
+      return { preset, startDate, endDate, label: formatRangeLabel(startDate, endDate) };
+    }
+    const resolved = presets[preset] || presets.mtd;
+    return { preset: preset in presets ? preset : 'mtd', ...resolved };
+  }
+
+  function getPriorFinanceRange(startIso, endIso) {
+    const days = daysInclusive(startIso, endIso);
+    return {
+      startDate: shiftISODate(startIso, -days),
+      endDate: shiftISODate(endIso, -days),
+    };
+  }
+
+  function prorateFixedOverhead(startIso, endIso) {
+    const model = getPlModel();
+    const start = new Date(startIso + 'T12:00:00');
+    const end = new Date(endIso + 'T12:00:00');
+    let total = 0;
+    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (cursor <= end) {
+      const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+      const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
+      const rangeStart = start > monthStart ? start : monthStart;
+      const rangeEnd = end < monthEnd ? end : monthEnd;
+      if (rangeStart <= rangeEnd) {
+        const daysInMonth = monthEnd.getDate();
+        const daysInRange = Math.round((rangeEnd - rangeStart) / 86400000) + 1;
+        total += model.monthlyFixedOverhead * (daysInRange / daysInMonth);
+      }
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return total;
+  }
+
+  function getOrdersInRange(startIso, endIso) {
+    return getOrders().filter((o) => {
+      if (o.status === 'cancelled') return false;
+      const d = (o.date || '').slice(0, 10);
+      return d >= startIso && d <= endIso;
+    });
+  }
+
   function getCurrentMonthOrders() {
-    const key = getMonthKey(new Date().toISOString());
-    return getOrders().filter((o) => o.status !== 'cancelled' && getMonthKey(o.date) === key);
+    const today = todayISO();
+    return getOrdersInRange(startOfMonthISO(today), today);
   }
 
   function calcOrderProfit(order) {
     const revenue = order.total || 0;
     const cogs = orderCogs(order);
-    const processing = revenue * PL_MODEL.processingRate + PL_MODEL.processingFee;
-    const refundReserve = revenue * PL_MODEL.refundRate;
+    const model = getPlModel();
+    const processing = revenue * model.processingRate + model.processingFee;
+    const refundReserve = revenue * model.refundRate;
     return revenue - cogs - processing - refundReserve;
   }
 
-  function getFinanceSummary() {
-    const monthOrders = getCurrentMonthOrders();
-    const allActive = getOrders().filter((o) => o.status !== 'cancelled');
-    const grossRevenue = monthOrders.reduce((s, o) => s + (o.total || 0), 0);
-    const grossRevenueAll = allActive.reduce((s, o) => s + (o.total || 0), 0);
-    const cogs = monthOrders.reduce((s, o) => s + orderCogs(o), 0);
-    const processing = monthOrders.reduce((s, o) => s + (o.total || 0) * PL_MODEL.processingRate + PL_MODEL.processingFee, 0);
-    const refunds = grossRevenue * PL_MODEL.refundRate;
+  function buildPeptideFinanceSummary(startIso, endIso) {
+    const model = getPlModel();
+    const rangeOrders = getOrdersInRange(startIso, endIso);
+    const grossRevenue = rangeOrders.reduce((s, o) => s + (o.total || 0), 0);
+    const cogs = rangeOrders.reduce((s, o) => s + orderCogs(o), 0);
+    const processing = rangeOrders.reduce((s, o) => s + (o.total || 0) * model.processingRate + model.processingFee, 0);
+    const refunds = grossRevenue * model.refundRate;
     const grossProfit = grossRevenue - cogs;
-    const marketing = grossRevenue * PL_MODEL.marketingPct;
-    const ebitda = grossProfit - processing - refunds - marketing - PL_MODEL.monthlyFixedOverhead;
-    const orderProfit = monthOrders.reduce((s, o) => s + calcOrderProfit(o), 0);
+    const marketing = grossRevenue * model.marketingPct;
+    const fixedOverhead = prorateFixedOverhead(startIso, endIso);
+    const ebitda = grossProfit - processing - refunds - marketing - fixedOverhead;
+    const orderProfit = rangeOrders.reduce((s, o) => s + calcOrderProfit(o), 0);
 
     return {
-      monthOrders: monthOrders.length,
+      source: 'peptide',
+      orderCount: rangeOrders.length,
       grossRevenue,
-      grossRevenueAll,
       cogs,
       grossProfit,
       grossMargin: grossRevenue ? grossProfit / grossRevenue : 0,
       processing,
       refunds,
       marketing,
-      fixedOverhead: PL_MODEL.monthlyFixedOverhead,
+      fixedOverhead,
       ebitda,
       orderProfit,
-      avgOrderValue: monthOrders.length ? grossRevenue / monthOrders.length : 0,
+      avgOrderValue: rangeOrders.length ? grossRevenue / rangeOrders.length : 0,
+      lineItems: rangeOrders,
+    };
+  }
+
+  function getFinanceSummary(options = {}) {
+    const range = resolveFinanceRange(options.preset, options.startDate, options.endDate);
+    const activeSource = options.source || 'peptide';
+    const peptide = applyPlAdjustmentsToSummary(
+      buildPeptideFinanceSummary(range.startDate, range.endDate),
+      range.startDate,
+      range.endDate,
+      activeSource
+    );
+    const allActive = getOrders().filter((o) => o.status !== 'cancelled');
+    const grossRevenueAll = allActive.reduce((s, o) => s + (o.total || 0), 0);
+    const priorRange = getPriorFinanceRange(range.startDate, range.endDate);
+    const prior = applyPlAdjustmentsToSummary(
+      buildPeptideFinanceSummary(priorRange.startDate, priorRange.endDate),
+      priorRange.startDate,
+      priorRange.endDate,
+      activeSource
+    );
+
+    return {
+      ...peptide,
+      monthOrders: peptide.orderCount,
+      grossRevenueAll,
+      range,
+      priorRange,
+      prior,
+      plModel: getPlModel(),
+      compare: {
+        grossRevenue: pctChange(peptide.grossRevenue, prior.grossRevenue),
+        ebitda: pctChange(peptide.ebitda, prior.ebitda),
+        orderCount: pctChange(peptide.orderCount, prior.orderCount),
+      },
+    };
+  }
+
+  function pctChange(current, previous) {
+    if (!previous) return current ? 100 : 0;
+    return ((current - previous) / Math.abs(previous)) * 100;
+  }
+
+  function combineFinanceSummaries(parts) {
+    const valid = parts.filter(Boolean);
+    const grossRevenue = valid.reduce((s, p) => s + (p.grossRevenue || 0), 0);
+    const cogs = valid.reduce((s, p) => s + (p.cogs || 0), 0);
+    const processing = valid.reduce((s, p) => s + (p.processing || 0), 0);
+    const refunds = valid.reduce((s, p) => s + (p.refunds || 0), 0);
+    const marketing = valid.reduce((s, p) => s + (p.marketing || 0), 0);
+    const fixedOverhead = valid.reduce((s, p) => s + (p.fixedOverhead || 0), 0);
+    const discounts = valid.reduce((s, p) => s + (p.discounts || 0), 0);
+    const creditApplied = valid.reduce((s, p) => s + (p.creditApplied || 0), 0);
+    const grossProfit = grossRevenue - cogs;
+    const ebitdaBeforeAdjustments = valid.reduce((s, p) => s + (p.ebitdaBeforeAdjustments ?? p.ebitda ?? 0), 0);
+    const adjustmentsNet = valid.reduce((s, p) => s + (p.adjustmentsNet || 0), 0);
+    const plAdjustments = valid.flatMap((p) => p.plAdjustments || []);
+    const ebitda = valid.reduce((s, p) => s + (p.ebitda || 0), 0);
+    const orderCount = valid.reduce((s, p) => s + (p.orderCount || p.transactionCount || 0), 0);
+    return {
+      source: 'combined',
+      orderCount,
+      transactionCount: orderCount,
+      grossRevenue,
+      discounts,
+      creditApplied,
+      cogs,
+      grossProfit,
+      grossMargin: grossRevenue ? grossProfit / grossRevenue : 0,
+      processing,
+      refunds,
+      marketing,
+      fixedOverhead,
+      ebitdaBeforeAdjustments,
+      adjustmentsNet,
+      plAdjustments,
+      adjustmentsSummary: summarizePlAdjustments(plAdjustments),
+      ebitda,
+      adjustedEbitda: ebitda,
+      avgOrderValue: orderCount ? grossRevenue / orderCount : 0,
+      parts: valid,
     };
   }
 
@@ -580,7 +905,7 @@ window.RenvoaAdmin = (function () {
         customerName: o.customer.name,
         orderId: o.id,
         subject: `Order confirmation — ${o.id}`,
-        body: `Hi ${o.customer.name},\n\nThank you for your RENVOA CLINIC order (${o.id}). We're preparing your shipment.\n\n— RENVOA CLINIC`,
+        body: `Hi ${o.customer.name},\n\nThank you for your ONYX Peptides order (${o.id}). We're preparing your shipment.\n\n— ONYX Peptides`,
         direction: 'outbound',
         auto: true,
       });
@@ -642,7 +967,20 @@ window.RenvoaAdmin = (function () {
   return {
     KEYS,
     ORDER_STATUSES,
-    PL_MODEL,
+    PL_MODEL: DEFAULT_PL_MODEL,
+    DEFAULT_PL_MODEL,
+    PL_ADJUSTMENT_SOURCES,
+    PL_ADJUSTMENT_TYPES,
+    getPlModel,
+    savePlModel,
+    getPlAdjustments,
+    getPlAdjustment,
+    addPlAdjustment,
+    updatePlAdjustment,
+    deletePlAdjustment,
+    getPlAdjustmentsInRange,
+    applyPlAdjustmentsToSummary,
+    summarizePlAdjustments,
     LANDED_COGS,
     isAuthed,
     login,
@@ -655,6 +993,19 @@ window.RenvoaAdmin = (function () {
     getGoals,
     saveGoals,
     getFinanceSummary,
+    buildPeptideFinanceSummary,
+    combineFinanceSummaries,
+    resolveFinanceRange,
+    getOrdersInRange,
+    getPriorFinanceRange,
+    formatRangeLabel,
+    daysInclusive,
+    todayISO,
+    shiftISODate,
+    startOfMonthISO,
+    endOfMonthISO,
+    prorateFixedOverhead,
+    pctChange,
     getPipelineCounts,
     getCustomers,
     getWholesaleInquiries,

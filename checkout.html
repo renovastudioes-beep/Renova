@@ -3,25 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Checkout — RENVOA CLINIC</title>
+  <title>Checkout — ONYX Peptides</title>
   <meta name="robots" content="noindex">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="page-body">
   <nav class="global-nav scrolled">
     <div class="nav-content">
-      <a href="index.html" class="nav-logo">RENVOA CLINIC</a>
-      <a href="index.html" class="link-cta">← Back to Store</a>
+      <a href="index.html" class="nav-logo">ONYX</a>
+      <a href="peptides.html" class="link-cta">← Back to Store</a>
     </div>
   </nav>
 
   <main class="page-main checkout-page">
     <h1>Checkout</h1>
-    <p class="page-sub">Research qualification required for all orders.</p>
+    <p class="page-sub">Submit your order request. Final pricing is confirmed by our team before fulfillment.</p>
 
     <div id="checkoutEmpty" class="checkout-empty" hidden>
       <p>Your bag is empty.</p>
-      <a href="index.html#peptides" class="btn-primary">Browse Peptides</a>
+      <a href="peptides.html#peptides" class="btn-primary">Browse Peptides</a>
     </div>
 
     <div class="checkout-layout" id="checkoutWrap" hidden>
@@ -55,30 +55,33 @@
           <h2>Add-Ons</h2>
           <label class="check-label addon-label">
             <input type="checkbox" id="bacAddon">
-            <span><strong>Bacteriostatic Water 30mL</strong> — $12.00<br><small>Sterile reconstitution solution. Recommended for lyophilized peptides.</small></span>
+            <span><strong>Bacteriostatic Water 30mL</strong><br><small>Sterile reconstitution solution. Recommended for lyophilized peptides.</small></span>
           </label>
         </section>
 
         <p class="legal-check">By placing your order you agree to our <a href="legal/research-agreement.html">Research Agreement</a>, <a href="legal/terms.html">Terms of Sale</a>, and <a href="legal/privacy.html">Privacy Policy</a>.</p>
-        <button type="submit" class="btn-primary btn-full" id="placeOrderBtn">Place Order</button>
+        <button type="submit" class="btn-primary btn-full" id="placeOrderBtn">Submit order request</button>
       </form>
 
       <aside class="checkout-summary">
         <h2>Order Summary</h2>
         <div id="checkoutItems"></div>
         <div class="checkout-totals">
-          <div class="checkout-line"><span>Subtotal</span><span id="sumSubtotal">$0.00</span></div>
-          <div class="checkout-line"><span>Cold-chain shipping</span><span id="sumShipping">$0.00</span></div>
+          <div class="checkout-line"><span>Subtotal</span><span id="sumSubtotal">Pending</span></div>
+          <div class="checkout-line"><span>Cold-chain shipping</span><span id="sumShipping">Pending</span></div>
           <p class="shipping-note" id="shippingNote"></p>
-          <div class="checkout-line checkout-total"><span>Total</span><span id="sumTotal">$0.00</span></div>
+          <div class="checkout-line checkout-total"><span>Total</span><span id="sumTotal">Pending quote</span></div>
+          <p class="checkout-quote-note">Line-item pricing is managed in our business POS — not shown publicly.</p>
         </div>
       </aside>
     </div>
   </main>
 
   <script src="js/config.js"></script>
+  <script src="js/storefront.js"></script>
   <script src="js/products.js"></script>
   <script src="js/cart.js"></script>
+  <script src="js/pos-data.js"></script>
   <script src="js/admin-data.js"></script>
   <script src="js/analytics.js"></script>
   <script src="js/checkout.js"></script>
