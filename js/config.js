@@ -20,8 +20,8 @@ window.RENVOA_CONFIG = {
   adminPassword: 'onyx2026',
 
   storefront: {
-    checkoutMode: 'quote',
-    hideLinePricing: true,
+    checkoutMode: 'purchase',
+    hideLinePricing: false,
     addToBagLabel: 'Add to bag',
   },
 

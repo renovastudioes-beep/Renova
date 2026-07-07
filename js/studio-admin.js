@@ -899,6 +899,23 @@ window.RenvoaStudios = (function () {
   }
 
   // ——— Clients ———
+  function stableClientId(client, idx) {
+    const basis = [
+      client?.id,
+      client?.phone,
+      client?.email,
+      client?.name,
+      client?.createdAt,
+      idx,
+    ].map((v) => String(v || '').trim().toLowerCase()).join('|');
+    let hash = 0;
+    for (let i = 0; i < basis.length; i += 1) {
+      hash = ((hash << 5) - hash) + basis.charCodeAt(i);
+      hash |= 0;
+    }
+    return 'SC-' + Math.abs(hash).toString(36).toUpperCase().padStart(8, '0').slice(0, 8);
+  }
+
   function normalizeClientsList(raw) {
     const list = Array.isArray(raw) ? raw : [];
     const byId = new Map();
@@ -910,7 +927,7 @@ window.RenvoaStudios = (function () {
       }
       let id = String(c.id || '').trim();
       if (!id || id === 'undefined' || id === 'null') {
-        id = 'SC-' + Date.now().toString(36).toUpperCase() + idx;
+        id = stableClientId(c, idx);
         changed = true;
       }
       const entry = { ...c, id };
@@ -931,7 +948,11 @@ window.RenvoaStudios = (function () {
 
   function getClients() {
     return normalizeClientsList(read(KEYS.clients, []))
-      .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+      .sort((a, b) => {
+        const diff = new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
+        if (diff !== 0) return diff;
+        return (a.name || '').localeCompare(b.name || '');
+      });
   }
 
   function getClient(id) {
@@ -2080,11 +2101,27 @@ window.RenvoaStudios = (function () {
   function searchClients(query) {
     const q = String(query || '').trim().toLowerCase();
     if (!q) return getClients();
-    return getClients().filter((c) =>
-      (c.name || '').toLowerCase().includes(q)
-      || (c.email || '').toLowerCase().includes(q)
-      || normalizePhone(c.phone).includes(normalizePhone(q))
-    );
+    const tokens = q.split(/\s+/).filter(Boolean);
+    const phoneQ = normalizePhone(q);
+    return getClients().filter((c) => {
+      const name = (c.name || '').toLowerCase();
+      const email = (c.email || '').toLowerCase();
+      const phone = normalizePhone(c.phone);
+      const portal = String(c.portalCode || '').toLowerCase();
+      const notes = (c.notes || '').toLowerCase();
+      const matchesToken = (token) => {
+        const t = token.toLowerCase();
+        const phoneToken = normalizePhone(token);
+        return name.includes(t)
+          || email.includes(t)
+          || (phoneToken.length >= 3 && phone.includes(phoneToken))
+          || portal.includes(t)
+          || notes.includes(t);
+      };
+      if (tokens.length > 1) return tokens.every(matchesToken);
+      return matchesToken(q)
+        || (phoneQ.length >= 3 && phone.includes(phoneQ));
+    });
   }
 
   function resolveBookingExtras(data = {}) {
@@ -2095,11 +2132,87 @@ window.RenvoaStudios = (function () {
     const prefNote = VF?.formatClientPreferencesNote?.(prefs) || '';
     const baseNotes = String(data.notes || '').trim();
     const notes = [baseNotes, prefNote].filter(Boolean).join('\n\n');
+    const inspoFromPrefs = prefs?.inspoPhotos || [];
+    const inspoFromData = Array.isArray(data.bookingInspoPhotos) ? data.bookingInspoPhotos : [];
+    const bookingInspoPhotos = inspoFromData.length ? inspoFromData : inspoFromPrefs;
     return {
       clientPreferences: prefs,
-      bookingInspoPhotos: prefs?.inspoPhotos || data.bookingInspoPhotos || [],
+      bookingInspoPhotos,
       notes,
     };
+  }
+
+  function isOnlineBookingSource(source) {
+    return source === 'client_portal' || source === 'website';
+  }
+
+  function getOnlineBookingSourceLabel(source) {
+    if (source === 'client_portal') return 'Client portal';
+    if (source === 'website') return 'Website';
+    return '';
+  }
+
+  function getAppointmentInspoPhotos(appt) {
+    if (!appt) return [];
+    const seen = new Set();
+    const out = [];
+    const push = (photo) => {
+      const key = photo?.id || photo?.dataUrl;
+      if (!photo?.dataUrl || !key || seen.has(key)) return;
+      seen.add(key);
+      out.push(photo);
+    };
+    (appt.bookingInspoPhotos || []).forEach(push);
+    (appt.clientPreferences?.inspoPhotos || []).forEach(push);
+    if (appt.clientId) {
+      getClientPhotos(appt.clientId)
+        .filter((p) => p.appointmentId === appt.id && (p.kind === 'inspo' || p.kind === 'reference'))
+        .forEach(push);
+    }
+    return out;
+  }
+
+  function appointmentHasBookingPrep(appt) {
+    if (!appt) return false;
+    const prefs = appt.clientPreferences || {};
+    return getAppointmentInspoPhotos(appt).length > 0
+      || !!String(prefs.hairLikes || '').trim()
+      || !!String(prefs.hairDislikes || '').trim()
+      || !!String(prefs.priorServices || '').trim()
+      || !!String(prefs.beverageLabel || prefs.beverage || '').trim();
+  }
+
+  function persistBookingInspoPhotos(apptId, clientId, photos = []) {
+    if (!apptId || !clientId || !photos.length) return;
+    const existing = getClientPhotos(clientId).filter((p) => p.appointmentId === apptId && p.kind === 'inspo');
+    const existingUrls = new Set(existing.map((p) => p.dataUrl));
+    photos.forEach((photo) => {
+      if (!photo?.dataUrl || existingUrls.has(photo.dataUrl)) return;
+      addClientPhoto(clientId, {
+        appointmentId: apptId,
+        kind: 'inspo',
+        label: photo.name || 'Inspiration',
+        dataUrl: photo.dataUrl,
+        width: photo.width || 0,
+        height: photo.height || 0,
+      });
+    });
+  }
+
+  function getPendingOnlineBookings() {
+    const today = todayISO();
+    return sortApptsByTime(
+      getAppointments().filter((a) =>
+        a.status === 'scheduled'
+        && isOnlineBookingSource(a.source)
+        && !a.bookingReviewedAt
+        && a.date >= today,
+      ),
+    ).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }
+
+  function markBookingReviewed(apptId) {
+    return updateAppointment(apptId, { bookingReviewedAt: new Date().toISOString() });
   }
 
   function createAppointment(data) {
@@ -2166,6 +2279,7 @@ window.RenvoaStudios = (function () {
       scheduledVisitTypeId: data.scheduledVisitTypeId || '',
       clientPreferences: bookingExtras.clientPreferences,
       bookingInspoPhotos: bookingExtras.bookingInspoPhotos,
+      bookingReviewedAt: data.bookingReviewedAt || '',
       beforePhotosAt: data.beforePhotosAt || '',
       afterPhotosAt: data.afterPhotosAt || '',
       extOptions: data.extOptions || null,
@@ -2201,6 +2315,9 @@ window.RenvoaStudios = (function () {
         write(KEYS.appointments, list);
       }
       syncClientVisitTag(client.id);
+    }
+    if (bookingExtras.bookingInspoPhotos?.length && appt.clientId) {
+      persistBookingInspoPhotos(appt.id, appt.clientId, bookingExtras.bookingInspoPhotos);
     }
     return appt;
   }
@@ -3706,10 +3823,6 @@ window.RenvoaStudios = (function () {
     if (appt.programId && appt.programId === program.id) return true;
     const family = apptProgramFamily(appt);
     if (family && family === program.programName) return true;
-    const svc = appt.serviceId ? getService(appt.serviceId) : null;
-    if (svc?.category && program.category && svc.category === program.category && program.category !== 'clinical') {
-      return programBaseName(svc.name) === program.programName;
-    }
     return false;
   }
 
@@ -3814,9 +3927,10 @@ window.RenvoaStudios = (function () {
 
   function refreshPackageVisitFields(clientId, opts = {}) {
     const baseProgram = opts.programId
-      ? (getClientProgramSummary(clientId).programs || []).find((p) => p.id === opts.programId && (p.visitsRemaining || 0) > 0)
+      ? (getClientProgramSummary(clientId, { force: true }).programs || []).find((p) =>
+        p.id === opts.programId && isProgramEnrollmentActive(p) && (p.visitsRemaining || 0) > 0)
       : findActiveProgramForBooking(clientId, opts);
-    if (!baseProgram || (baseProgram.visitsRemaining || 0) <= 0) return null;
+    if (!baseProgram || !isProgramEnrollmentActive(baseProgram) || (baseProgram.visitsRemaining || 0) <= 0) return null;
     const excludeIds = normalizeExcludeAppointmentIds(opts);
     const program = excludeIds.length
       ? getAdjustedProgramVisitCounts(clientId, baseProgram, excludeIds)
@@ -3842,6 +3956,8 @@ window.RenvoaStudios = (function () {
   function redeemPackageVisitOnAppointment(apptId, data = {}) {
     const appt = getAppointment(apptId);
     if (!appt?.clientId) return { error: 'Appointment not found.' };
+    const allowed = assertPackageVisitRedemptionAllowed(appt.clientId, data.programId || appt.programId, apptId);
+    if (allowed.error) return { error: allowed.error, needsCancelPrompt: allowed.needsCancelPrompt };
     const redeemedAt = data.redeemedAt || new Date().toISOString();
     const fresh = refreshPackageVisitFields(appt.clientId, {
       programId: data.programId,
@@ -3991,7 +4107,9 @@ window.RenvoaStudios = (function () {
     };
     if (!programQualifiesForWarranty(program)) return base;
 
-    if (program.voided || program.refunded || program.fullyRefunded) {
+    const override = getProgramOverride(clientId, program.id);
+    const manuallyVoided = override?.active === false || program.voided || program.manuallyVoided;
+    if (manuallyVoided || program.refunded || program.fullyRefunded) {
       const inactiveLabel = program.refunded || program.fullyRefunded ? 'Refunded' : 'Voided';
       return {
         ...base,
@@ -4005,7 +4123,6 @@ window.RenvoaStudios = (function () {
       };
     }
 
-    const override = getProgramOverride(clientId, program.id);
     const today = asOfDate || todayISO();
     const intervalDays = PACKAGE_WARRANTY_INTERVALS[program.category] || PACKAGE_WARRANTY_INTERVALS.default;
     const anchor = findWarrantyAnchor(program, appts, clientId);
@@ -4141,6 +4258,7 @@ window.RenvoaStudios = (function () {
     if (idx >= 0) list[idx] = next;
     else list.push(next);
     write(KEYS.programOverrides, list);
+    invalidateClientDataCaches(clientId);
     return { success: true, override: next };
   }
 
@@ -4198,6 +4316,12 @@ window.RenvoaStudios = (function () {
     if (p.partiallyRefunded) {
       p.enrollmentStatus = 'partial_refund';
       p.enrollmentLabel = 'Partially refunded';
+      if ((p.totalPaid || 0) > 0 && (p.visitsIncluded || 0) > 0 && !p.visitsIncludedOverride) {
+        const ratio = Math.max(0, Math.min(1, (p.netPaid || 0) / p.totalPaid));
+        const prorated = Math.max(0, Math.floor((p.visitsIncluded || 0) * ratio));
+        p.visitsIncluded = Math.min(p.visitsIncluded, prorated);
+        p.visitsRemaining = Math.max(0, (p.visitsIncluded || 0) - (p.visitsUsed || 0) - (p.visitsScheduled || 0));
+      }
       return p;
     }
     if ((p.visitsIncluded || 0) > 0 && (p.visitsRemaining || 0) <= 0 && (p.visitsUsed || 0) >= (p.visitsIncluded || 0)) {
@@ -4232,10 +4356,11 @@ window.RenvoaStudios = (function () {
     }
     if (override.active === false) {
       p.voided = true;
+      p.manuallyVoided = true;
       p.visitsRemaining = 0;
-    } else if (override.active === true) {
+    } else if (override.active === true && !p.fullyRefunded && !p.refunded) {
       p.voided = false;
-      p.refunded = false;
+      p.manuallyVoided = false;
     }
     if (override.warrantyStatus) {
       p.warrantyStatusOverride = override.warrantyStatus;
@@ -4256,9 +4381,11 @@ window.RenvoaStudios = (function () {
       p.visitsUsed = countProgramAppts(p, inWindow, ['completed']);
       p.visitsScheduled = countProgramAppts(p, inWindow, PACKAGE_ACTIVE_STATUSES);
       const override = resolveProgramOverrideForProgram(p, overrides, p.itemIndex);
-      applyProgramOverrideToProgram(p, override);
+      Object.assign(p, applyProgramOverrideToProgram(p, override));
       if (!p.voided && !p.fullyRefunded) {
         p.visitsRemaining = Math.max(0, (p.visitsIncluded || 0) - p.visitsUsed - p.visitsScheduled);
+      } else if (p.voided || p.fullyRefunded) {
+        p.visitsRemaining = 0;
       }
       Object.assign(p, finalizeProgramEnrollmentStatus(p));
     });
@@ -4271,8 +4398,9 @@ window.RenvoaStudios = (function () {
     (tx.items || []).forEach((item, idx) => {
       if (!resolveProgramFromTxItem(item)) return;
       const programId = `${transactionId}-${idx}`;
+      const refundMeta = getProgramRefundMeta(tx, item, idx, tx.items);
       const existing = getProgramOverride(clientId, programId);
-      if (existing?.active === false) return;
+      if (existing?.active === false && refundMeta.fullyRefunded) return;
       saveProgramOverride(clientId, programId, {
         active: false,
         transactionId,
@@ -4280,11 +4408,128 @@ window.RenvoaStudios = (function () {
         notes: notes || 'Auto-voided — sale fully refunded',
       });
     });
+    invalidateClientDataCaches(clientId);
+  }
+
+  function resolveProgramForAppointment(appt, clientId) {
+    if (!appt || !clientId) return null;
+    const programs = getClientProgramSummary(clientId, { force: true }).programs || [];
+    if (appt.programId) {
+      const byId = programs.find((p) => p.id === appt.programId);
+      if (byId) return byId;
+    }
+    if (appt.programName) {
+      return programs.find((p) => p.programName === appt.programName) || null;
+    }
+    return null;
+  }
+
+  function appointmentUsesInactiveProgram(appt, clientId) {
+    if (!appt?.packageVisit || !clientId) return false;
+    const program = resolveProgramForAppointment(appt, clientId);
+    if (!program) return false;
+    return !isProgramEnrollmentActive(program);
+  }
+
+  function getFuturePackageAppointmentsForInactivePrograms(clientId) {
+    if (!clientId) return { appointments: [], details: [], programs: [] };
+    const summary = getClientProgramSummary(clientId, { force: true });
+    const inactivePrograms = (summary.programs || []).filter((p) => !isProgramEnrollmentActive(p));
+    if (!inactivePrograms.length) return { appointments: [], details: [], programs: [] };
+
+    const today = todayISO();
+    const details = [];
+    getClientAppointments(clientId)
+      .filter((a) => a.packageVisit && !['canceled', 'completed', 'no_show'].includes(a.status))
+      .filter((a) => (a.date || '') >= today)
+      .forEach((appt) => {
+        const program = inactivePrograms.find((p) =>
+          (appt.programId && p.id === appt.programId)
+          || (appt.programName && p.programName === appt.programName),
+        );
+        if (program) details.push({ appointment: appt, program });
+      });
+
+    return {
+      appointments: details.map((d) => d.appointment),
+      details,
+      programs: inactivePrograms,
+    };
+  }
+
+  function cancelFuturePackageAppointmentsForInactivePrograms(clientId, opts = {}) {
+    const { details } = getFuturePackageAppointmentsForInactivePrograms(clientId);
+    const programIds = new Set((opts.programIds || []).filter(Boolean));
+    const toCancel = programIds.size
+      ? details.filter((d) => programIds.has(d.program.id))
+      : details;
+    let canceled = 0;
+    toCancel.forEach(({ appointment: appt, program }) => {
+      const retail = getPostVisitRetailPrice(appt, clientId) || appt.price || 0;
+      updateAppointment(appt.id, {
+        status: 'canceled',
+        packageVisit: false,
+        price: retail,
+        notes: [appt.notes, `Canceled — ${program.enrollmentLabel || 'package'} no longer active`].filter(Boolean).join('\n'),
+      });
+      canceled += 1;
+    });
+    if (canceled) invalidateClientDataCaches(clientId);
+    return { canceled, appointments: toCancel.map((d) => d.appointment) };
+  }
+
+  function assertPackageVisitRedemptionAllowed(clientId, programId, apptId) {
+    if (!clientId) return { error: 'Link a client before applying a package visit.' };
+    const summary = getClientProgramSummary(clientId, { force: true });
+    const program = programId
+      ? (summary.programs || []).find((p) => p.id === programId)
+      : null;
+    if (!program || !isProgramEnrollmentActive(program)) {
+      return {
+        error: 'This package is no longer active. Cancel future prepaid appointments or charge full retail price.',
+        needsCancelPrompt: true,
+      };
+    }
+    const appt = apptId ? getAppointment(apptId) : null;
+    if (appt && appointmentUsesInactiveProgram(appt, clientId)) {
+      return {
+        error: 'This appointment was booked as a prepaid visit on an inactive package. Cancel it or charge full price.',
+        needsCancelPrompt: true,
+      };
+    }
+    const blocked = getFuturePackageAppointmentsForInactivePrograms(clientId);
+    if (blocked.appointments.length) {
+      return {
+        error: 'Future prepaid appointments exist on an inactive package. Cancel them before applying visit credit.',
+        needsCancelPrompt: true,
+        blocked,
+      };
+    }
+    return { ok: true, program };
+  }
+
+  function getRefundedTotalForTransaction(transactionId) {
+    if (!transactionId) return 0;
+    return getTransactions()
+      .filter((t) => t.type === 'refund' && t.refundOf === transactionId)
+      .reduce((sum, t) => sum + Math.abs(Number(t.total) || 0), 0);
   }
 
   function getRefundableAmount(tx) {
-    if (!tx || tx.type === 'refund') return 0;
-    return Math.max(0, (Number(tx.total) || 0) - (Number(tx.refundedAmount) || 0));
+    if (!tx || tx.type === 'refund' || tx.status === 'voided') return 0;
+    const total = Math.max(0, Number(tx.total) || 0);
+    const refunded = Math.max(
+      Number(tx.refundedAmount) || 0,
+      getRefundedTotalForTransaction(tx.id),
+    );
+    return Math.max(0, Math.round((total - refunded) * 100) / 100);
+  }
+
+  function getClientRefundableTransactions(clientId) {
+    if (!clientId) return [];
+    return getClientTransactions(clientId)
+      .filter((t) => getRefundableAmount(t) > 0)
+      .sort((a, b) => new Date(b.at) - new Date(a.at));
   }
 
   function addManualClientCredit(clientId, amount, notes) {
@@ -4299,41 +4544,57 @@ window.RenvoaStudios = (function () {
   }
 
   function issueClientRefund(clientId, transactionId, amount, notes) {
-    const txs = getTransactions();
-    const tx = txs.find((t) => t.id === transactionId);
+    const list = [...getTransactions()];
+    const idx = list.findIndex((t) => t.id === transactionId);
+    const tx = idx >= 0 ? list[idx] : null;
     const client = getClient(clientId);
     if (!tx || !client || !transactionMatchesClient(tx, client)) return { error: 'Transaction not found.' };
+    if (tx.type === 'refund') return { error: 'Cannot refund a refund transaction.' };
     const refundable = getRefundableAmount(tx);
     const refundAmt = Math.min(refundable, Math.max(0, Number(amount) || 0));
     if (refundAmt <= 0) return { error: 'Nothing left to refund on this transaction.' };
 
     const itemLabel = (tx.items || []).map((i) => i.name).filter(Boolean).join(', ') || 'Sale';
-    const refundTx = createTransaction({
+    const refundTx = {
+      id: 'STX-' + Date.now().toString(36).toUpperCase(),
+      at: new Date().toISOString(),
+      status: 'completed',
       type: 'refund',
+      paymentMethod: tx.paymentMethod || 'card',
       clientId,
       clientName: tx.clientName,
-      paymentMethod: tx.paymentMethod || 'card',
+      walkIn: false,
       items: [{ name: `Refund — ${itemLabel}`, price: -refundAmt, qty: 1 }],
       subtotal: -refundAmt,
+      discount: 0,
       total: -refundAmt,
       notes: notes || `Refund for transaction ${transactionId}`,
+      appointmentId: tx.appointmentId || '',
+      creditApplied: 0,
       refundOf: transactionId,
-    });
-
-    const updated = getTransactions().map((t) =>
-      t.id === transactionId
-        ? { ...t, refundedAmount: (Number(t.refundedAmount) || 0) + refundAmt }
-        : t
-    );
-    write(KEYS.transactions, updated);
-    const remaining = getRefundableAmount({
-      ...tx,
-      refundedAmount: (Number(tx.refundedAmount) || 0) + refundAmt,
-    });
+      refundedAmount: 0,
+    };
+    const newRefundedAmount = Math.round(((Number(tx.refundedAmount) || 0) + refundAmt) * 100) / 100;
+    list[idx] = { ...tx, refundedAmount: newRefundedAmount };
+    list.unshift(refundTx);
+    write(KEYS.transactions, list);
+    if (client) {
+      syncClientLinkedRecords(client);
+      if (!isSchedulingFeeTransaction(refundTx)) syncClientVisitTag(clientId);
+    }
+    const remaining = getRefundableAmount(list[idx]);
     if (remaining <= 0) {
       voidProgramsForRefundedTransaction(clientId, transactionId, notes || 'Auto-voided — sale fully refunded');
     }
-    return { success: true, refund: refundTx, amount: refundAmt };
+    invalidateClientDataCaches(clientId);
+    const blocked = getFuturePackageAppointmentsForInactivePrograms(clientId);
+    return {
+      success: true,
+      refund: refundTx,
+      amount: refundAmt,
+      needsInactiveProgramPrompt: blocked.appointments.length > 0,
+      inactiveProgramBlocked: blocked,
+    };
   }
 
   function adjustClientProgram(clientId, programId, data) {
@@ -4373,6 +4634,11 @@ window.RenvoaStudios = (function () {
     const summary = getClientProgramSummary(clientId);
     const programs = (summary.programs || []).filter((p) => isProgramEnrollmentActive(p));
     if (!programs.length) return null;
+
+    if (opts.programId) {
+      const byId = programs.find((p) => p.id === opts.programId);
+      if (byId) return byId;
+    }
 
     const svc = opts.serviceId ? getService(opts.serviceId) : null;
     const family = opts.extOptions?.family
@@ -4546,7 +4812,11 @@ window.RenvoaStudios = (function () {
 
     const client = getClient(clientId);
     const gender = client?.gender || opts.gender || 'men';
-    const program = findActiveProgramForBooking(clientId);
+    const nonPackageVisit = opts.visitTypeId ? getNonPackageVisitType(opts.visitTypeId) : null;
+    const bookSvc = opts.bookServiceId ? getService(opts.bookServiceId) : (opts.serviceId ? getService(opts.serviceId) : null);
+    const bookingNewEnrollment = !!(bookSvc?.isPackage || opts.extOptions?.family) && opts.usePrepaid === false;
+    const usePrepaid = opts.usePrepaid !== false && !nonPackageVisit && !bookingNewEnrollment;
+    const program = usePrepaid ? findActiveProgramForBooking(clientId, opts) : null;
 
     if (program && (program.visitsRemaining || 0) > 0) {
       const types = getScheduleVisitTypes(program.category);
@@ -4789,6 +5059,19 @@ window.RenvoaStudios = (function () {
   function getAppointmentPosCartItems(appt) {
     if (!appt) return [];
     const VF = window.StudioVisitFlow;
+    if (appt.packageVisit && appointmentUsesInactiveProgram(appt, appt.clientId)) {
+      const retail = getPostVisitRetailPrice(appt, appt.clientId);
+      const svc = appt.serviceId ? getService(appt.serviceId) : null;
+      return [{
+        id: appt.serviceId || `inactive-pkg-${appt.id}`,
+        name: `${appt.serviceName || shortName(svc?.name || 'Service')} — inactive package (full price)`,
+        price: retail,
+        qty: 1,
+        postVisitApptId: appt.id,
+        postVisitServiceLine: true,
+        inactivePackageBlocked: true,
+      }];
+    }
     if (appt.packageVisit) {
       const item = packageVisitPosItemFromFields({
         programId: appt.programId,
@@ -4868,7 +5151,8 @@ window.RenvoaStudios = (function () {
     }
     const baseItems = getAppointmentPosCartItems(appt);
     if (!baseItems.length) return [];
-    const program = appt.clientId ? findActiveProgramForBooking(appt.clientId, {
+    const inactiveBlocked = appt.clientId && getFuturePackageAppointmentsForInactivePrograms(appt.clientId).appointments.length > 0;
+    const program = appt.clientId && !inactiveBlocked ? findActiveProgramForBooking(appt.clientId, {
       serviceId: appt.serviceId,
       extOptions: appt.extOptions,
       programName: appt.programName,
@@ -5337,6 +5621,7 @@ window.RenvoaStudios = (function () {
       birthdaysUpcoming,
       birthdayCountToday: birthdaysToday.length,
       birthdayCountWeek: birthdayPrompts.length,
+      pendingOnlineBookings: getPendingOnlineBookings(),
     };
   }
 
@@ -5359,7 +5644,25 @@ window.RenvoaStudios = (function () {
   }
 
   function syncAllClientVisitTags() {
-    getClients().forEach((c) => syncClientVisitTag(c.id));
+    const list = getClients();
+    if (!list.length) return;
+    const now = new Date().toISOString();
+    let dirty = false;
+    const next = list.map((client) => {
+      const firstTime = isFirstTimeClient(client.id);
+      const tags = client.tags || [];
+      const hasTag = tags.includes(FIRST_VISIT_TAG);
+      if (firstTime && !hasTag) {
+        dirty = true;
+        return { ...client, tags: [...tags, FIRST_VISIT_TAG], updatedAt: now };
+      }
+      if (!firstTime && hasTag) {
+        dirty = true;
+        return { ...client, tags: tags.filter((t) => t !== FIRST_VISIT_TAG), updatedAt: now };
+      }
+      return client;
+    });
+    if (dirty) write(KEYS.clients, next);
   }
 
   function seedDemoData() {
@@ -5440,11 +5743,30 @@ window.RenvoaStudios = (function () {
     if (jordan && !jordan.portalCode) updateClient(jordan.id, { portalCode: '719384' });
   }
 
-  clearClientSessionRaw();
-  seedDemoData();
-  migrateClientPortalCodes();
-  syncAllClientVisitTags();
-  syncClientCreditsFromTransactions();
+  function runStudioDataBootTasks() {
+    clearClientSessionRaw();
+    seedDemoData();
+    migrateClientPortalCodes();
+    syncAllClientVisitTags();
+    syncClientCreditsFromTransactions();
+  }
+
+  function scheduleStudioDataBootTasks() {
+    const run = () => {
+      try {
+        runStudioDataBootTasks();
+      } catch (err) {
+        console.error('Studio data boot tasks failed:', err);
+      }
+    };
+    if (window.StudioStorage?.whenReady) {
+      window.StudioStorage.whenReady().then(run);
+    } else {
+      run();
+    }
+  }
+
+  scheduleStudioDataBootTasks();
 
   return {
     KEYS,
@@ -5573,6 +5895,8 @@ window.RenvoaStudios = (function () {
     getClientCreditEntries,
     addManualClientCredit,
     getRefundableAmount,
+    getRefundedTotalForTransaction,
+    getClientRefundableTransactions,
     issueClientRefund,
     getProgramOverrides,
     getProgramOverride,
@@ -5609,11 +5933,22 @@ window.RenvoaStudios = (function () {
     addClientPhotosFromFiles,
     removeClientPhoto,
     compressImageFile,
+    isOnlineBookingSource,
+    getOnlineBookingSourceLabel,
+    getAppointmentInspoPhotos,
+    appointmentHasBookingPrep,
+    getPendingOnlineBookings,
+    markBookingReviewed,
     findClientByPhone,
     getClientAppointments,
     getClientTransactions,
     getClientProgramSummary,
     isProgramEnrollmentActive,
+    resolveProgramForAppointment,
+    appointmentUsesInactiveProgram,
+    getFuturePackageAppointmentsForInactivePrograms,
+    cancelFuturePackageAppointmentsForInactivePrograms,
+    assertPackageVisitRedemptionAllowed,
     previewPackageBooking,
     getAppointmentCheckoutDisplay,
     getAppointmentPosItem,

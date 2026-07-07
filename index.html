@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>ONYX — Peptides &amp; Hair Restoration</title>
   <meta name="description" content="Choose your path — pharmaceutical-grade research peptides or private hair restoration at Onyx Studios.">
-  <link rel="stylesheet" href="css/gateway.css">
+  <link rel="stylesheet" href="css/gateway.css?v=2">
   <link rel="stylesheet" href="css/mobile-device.css?v=1">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
 </head>
-<body>
+<body class="gateway-body">
   <main class="renova-gateway" id="renovaGateway">
     <a href="peptides.html" class="gateway-panel gateway-panel-peptides" data-side="peptides">
       <div class="gateway-panel-bg" aria-hidden="true"></div>
@@ -109,8 +109,13 @@
 
   <div class="gateway-split-line" aria-hidden="true"></div>
   <div class="gateway-divider" aria-hidden="true"><span>or</span></div>
-  <p class="gateway-hint">Move cursor to explore · Click to enter</p>
+  <div class="gateway-swipe-cues" aria-hidden="true">
+    <span class="gateway-swipe-cue gateway-swipe-cue-peptides">Peptides</span>
+    <span class="gateway-swipe-cue gateway-swipe-cue-hair">Hair</span>
+  </div>
+  <p class="gateway-hint gateway-hint-desktop">Move cursor to explore · Click to enter</p>
+  <p class="gateway-hint gateway-hint-touch">Swipe toward Peptides or Hair to open</p>
 
-  <script src="js/gateway.js"></script>
+  <script src="js/gateway.js?v=2"></script>
 </body>
 </html>

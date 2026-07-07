@@ -4,6 +4,7 @@
 html, body {
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
@@ -91,6 +92,16 @@ ul { list-style: none; }
   height: 100vh;
   height: 100dvh;
   width: 100%;
+  touch-action: pan-x pan-y;
+}
+
+.renova-gateway.is-touch-ui {
+  touch-action: none;
+}
+
+.renova-gateway.is-swiping,
+.renova-gateway.is-navigating {
+  touch-action: none;
 }
 
 .gateway-panel {
@@ -795,10 +806,107 @@ ul { list-style: none; }
   color: #86868b;
   pointer-events: none;
   transition: opacity 0.35s;
+  max-width: min(92vw, 360px);
+  text-align: center;
 }
 
-.renova-gateway.is-tracking ~ .gateway-hint {
+.gateway-hint-touch {
+  display: none;
+}
+
+.gateway-swipe-cues {
+  display: none;
+}
+
+.renova-gateway.is-tracking ~ .gateway-hint,
+.renova-gateway.is-swiping ~ .gateway-hint,
+.renova-gateway.is-navigating ~ .gateway-hint {
   opacity: 0;
+}
+
+.renova-gateway.is-navigating {
+  pointer-events: none;
+}
+
+.renova-gateway.is-navigating .gateway-panel {
+  transition: opacity 0.45s var(--ease-out), filter 0.45s var(--ease-out);
+}
+
+.renova-gateway.is-navigating-peptides .gateway-panel-hair,
+.renova-gateway.is-navigating-hair .gateway-panel-peptides {
+  opacity: 0.15;
+  filter: blur(2px);
+}
+
+/* ---- Touch phones & tablets ---- */
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
+  .gateway-hint-desktop {
+    display: none;
+  }
+
+  .gateway-hint-touch {
+    display: block;
+  }
+
+  .gateway-swipe-cues {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 27;
+    pointer-events: none;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: calc(18px + env(safe-area-inset-top, 0px)) 20px calc(52px + env(safe-area-inset-bottom, 0px));
+    transition: opacity 0.35s;
+  }
+
+  .gateway-swipe-cue {
+    align-self: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(134, 134, 139, 0.72);
+    padding: 8px 14px;
+    border-radius: 980px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .gateway-swipe-cue-hair {
+    color: rgba(201, 168, 124, 0.95);
+    background: rgba(20, 18, 16, 0.55);
+    border-color: rgba(201, 168, 124, 0.18);
+  }
+
+  .renova-gateway.is-tracking ~ .gateway-swipe-cues,
+  .renova-gateway.is-swiping ~ .gateway-swipe-cues,
+  .renova-gateway.is-navigating ~ .gateway-swipe-cues {
+    opacity: 0;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .gateway-swipe-cues {
+    flex-direction: row;
+    align-items: center;
+    padding-left: calc(16px + env(safe-area-inset-left, 0px));
+    padding-right: calc(16px + env(safe-area-inset-right, 0px));
+    padding-top: 0;
+    padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .gateway-swipe-cue-peptides {
+    align-self: center;
+    margin-right: auto;
+  }
+
+  .gateway-swipe-cue-hair {
+    align-self: center;
+    margin-left: auto;
+  }
 }
 
 /* ---- Mobile ---- */

@@ -27,6 +27,19 @@ window.StudioStorage = (function () {
   const NOTIFY_DEBOUNCE_MS = 120;
   const ECHO_SUPPRESS_MS = 2500;
 
+  const ARRAY_MERGE_KEYS = new Set([
+    'renova-studio-clients',
+    'renova-studio-appointments',
+    'renova-studio-transactions',
+    'renova-studio-client-credits',
+    'renova-studio-program-overrides',
+    'renova-studio-program-visit-log',
+    'renova-studio-program-warranty-log',
+    'renova-studio-inquiries',
+    'renvoa-studio-bookings',
+    'renova-studio-staff',
+  ]);
+
   const cache = new Map();
   const dataFingerprints = new Map();
   let client = null;
@@ -35,6 +48,7 @@ window.StudioStorage = (function () {
   let readyPromise = null;
   let realtimeChannel = null;
   const pendingWrites = new Map();
+  const preReadyWrites = new Map();
   const writeTimers = new Map();
   const listeners = new Set();
   const echoSuppress = new Map();
@@ -61,6 +75,51 @@ window.StudioStorage = (function () {
     } catch {
       return String(Date.now());
     }
+  }
+
+  function recordTimestamp(item) {
+    return new Date(item?.updatedAt || item?.createdAt || item?.at || 0).getTime();
+  }
+
+  function mergeArrayCollections(incoming, existing) {
+    if (!Array.isArray(incoming)) return incoming;
+    if (!Array.isArray(existing) || !existing.length) return incoming;
+    const byId = new Map();
+    existing.forEach((item) => {
+      const id = String(item?.id || '').trim();
+      if (id) byId.set(id, item);
+    });
+    incoming.forEach((item) => {
+      const id = String(item?.id || '').trim();
+      if (!id) return;
+      const prev = byId.get(id);
+      if (!prev) {
+        byId.set(id, item);
+        return;
+      }
+      byId.set(id, recordTimestamp(item) >= recordTimestamp(prev) ? item : prev);
+    });
+    return [...byId.values()];
+  }
+
+  /** Detect stale partial cloud snapshots that would wipe newer local rows. */
+  function isSuspectPartialArraySnapshot(incoming, existing) {
+    if (!Array.isArray(incoming) || !Array.isArray(existing)) return false;
+    if (!incoming.length || incoming.length >= existing.length) return false;
+    const existingIds = new Set(existing.map((item) => String(item?.id || '').trim()).filter(Boolean));
+    if (!existingIds.size) return false;
+    const known = incoming.every((item) => existingIds.has(String(item?.id || '').trim()));
+    return known && incoming.length <= existing.length * 0.85;
+  }
+
+  function mergeIncomingCollection(key, incoming) {
+    if (!ARRAY_MERGE_KEYS.has(key) || !Array.isArray(incoming)) return incoming;
+    const existing = cache.has(key)
+      ? cache.get(key)
+      : readLocal(key, Array.isArray(incoming) ? [] : incoming);
+    if (!Array.isArray(existing) || !existing.length) return incoming;
+    if (!isSuspectPartialArraySnapshot(incoming, existing)) return incoming;
+    return mergeArrayCollections(incoming, existing);
   }
 
   function withTimeout(promise, ms, label) {
@@ -115,7 +174,12 @@ window.StudioStorage = (function () {
     if (!isCloudEnabled() || !isManagedKey(key)) return readLocal(key, fallback);
     if (!ready) return readLocal(key, fallback);
     if (cache.has(key)) return cache.get(key);
-    return fallback;
+    const local = readLocal(key, fallback);
+    if (local !== fallback) {
+      cache.set(key, local);
+      dataFingerprints.set(key, fingerprint(local));
+    }
+    return local;
   }
 
   function write(key, value) {
@@ -129,11 +193,35 @@ window.StudioStorage = (function () {
       return;
     }
 
-    cache.set(key, value);
-    dataFingerprints.set(key, fp);
-    writeLocal(key, value);
-    queueCloudWrite(key, value);
+    if (!ready) {
+      preReadyWrites.set(key, value);
+      writeLocal(key, value);
+      if (!unchanged) scheduleNotify(key);
+      return;
+    }
+
+    const nextValue = mergeIncomingCollection(key, value);
+    const nextFp = fingerprint(nextValue);
+    cache.set(key, nextValue);
+    dataFingerprints.set(key, nextFp);
+    writeLocal(key, nextValue);
+    queueCloudWrite(key, nextValue);
     scheduleNotify(key);
+  }
+
+  function applyPreReadyWrites() {
+    if (!preReadyWrites.size) return;
+    preReadyWrites.forEach((value, key) => {
+      const merged = mergeIncomingCollection(key, value);
+      const fp = fingerprint(merged);
+      if (dataFingerprints.get(key) === fp && cache.has(key)) return;
+      cache.set(key, merged);
+      dataFingerprints.set(key, fp);
+      writeLocal(key, merged);
+      queueCloudWrite(key, merged);
+      scheduleNotify(key);
+    });
+    preReadyWrites.clear();
   }
 
   function queueCloudWrite(key, value) {
@@ -192,10 +280,11 @@ window.StudioStorage = (function () {
     if (error) throw new Error(error.message || 'Could not load studio data from cloud.');
 
     (data || []).forEach((row) => {
-      cache.set(row.collection_key, row.data);
+      const merged = mergeIncomingCollection(row.collection_key, row.data);
+      cache.set(row.collection_key, merged);
       cache.set(`__ver:${row.collection_key}`, row.version || 0);
-      dataFingerprints.set(row.collection_key, fingerprint(row.data));
-      writeLocal(row.collection_key, row.data);
+      dataFingerprints.set(row.collection_key, fingerprint(merged));
+      writeLocal(row.collection_key, merged);
     });
   }
 
@@ -218,13 +307,14 @@ window.StudioStorage = (function () {
     const localVersion = cache.get(`__ver:${key}`) || 0;
     if (remoteVersion < localVersion) return;
 
-    const fp = fingerprint(row.data);
+    const merged = mergeIncomingCollection(key, row.data);
+    const fp = fingerprint(merged);
     if (dataFingerprints.get(key) === fp) return;
 
-    cache.set(key, row.data);
+    cache.set(key, merged);
     cache.set(`__ver:${key}`, remoteVersion);
     dataFingerprints.set(key, fp);
-    writeLocal(key, row.data);
+    writeLocal(key, merged);
     scheduleNotify(key);
     window.dispatchEvent(new CustomEvent('studio-storage-remote', { detail: { key } }));
   }
@@ -271,8 +361,9 @@ window.StudioStorage = (function () {
       });
 
       await loadFromCloud();
-      subscribeRealtime();
       ready = true;
+      applyPreReadyWrites();
+      subscribeRealtime();
       return { mode: 'cloud', workspaceId, collections: cache.size };
     })().catch((err) => {
       initError = err.message || String(err);

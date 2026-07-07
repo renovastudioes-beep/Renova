@@ -123,8 +123,12 @@
 
   function buildSizeSelector(p, selected) {
     if (!p.variants || Object.keys(p.variants).length <= 1) return '';
+    const showPrices = !SF.shouldHideLinePricing();
     const opts = Object.entries(p.variants)
-      .map(([key, v]) => `<option value="${key}"${key === selected ? ' selected' : ''}>${v.label}</option>`)
+      .map(([key, v]) => {
+        const label = showPrices ? `${v.label} — ${formatPrice(v.price)}` : v.label;
+        return `<option value="${key}"${key === selected ? ' selected' : ''}>${label}</option>`;
+      })
       .join('');
     return `<div class="modal-size-select"><label for="modalSize">Select size</label><select id="modalSize">${opts}</select></div>`;
   }
@@ -138,12 +142,24 @@
     const size = getModalSelectedSize() || p.defaultVariant;
     const priceEl = $('#modalLivePrice');
     const addBtn = $('#modalAddBtn');
-    const label = SF.formatStartingAt(p);
+    const label = SF.shouldHideLinePricing()
+      ? SF.formatStartingAt(p)
+      : SF.formatVariantPrice(p, size);
     if (priceEl) priceEl.textContent = label;
     if (addBtn) addBtn.textContent = SF.publicCtaLabel();
     const sticky = $('#modalStickyPrice');
     if (sticky) sticky.textContent = label;
     selectedModalSize = size;
+  }
+
+  function syncProductTilePrices() {
+    if (SF.shouldHideLinePricing()) return;
+    $$('[data-product]').forEach((tile) => {
+      const p = PRODUCTS[tile.dataset.product];
+      if (!p) return;
+      const priceEl = tile.querySelector('.tile-price');
+      if (priceEl) priceEl.textContent = SF.formatStartingAt(p);
+    });
   }
 
   function openCart() {
@@ -652,4 +668,5 @@
   });
 
   updateCartUI();
+  syncProductTilePrices();
 })();

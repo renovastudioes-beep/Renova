@@ -472,6 +472,26 @@ window.StudioVisitFlow = (function () {
     return '';
   }
 
+  /** True when a provider session was started or edited — not a booking-only activity placeholder. */
+  function providerSessionInProgress(appt) {
+    const ps = appt?.providerSession;
+    if (!ps) return false;
+    if (ps.startedAt) return true;
+    if (appt.status === 'with_provider') return true;
+    if (ps.notes?.trim()) return true;
+    if ((ps.subs || []).length > 0) return true;
+    if ((ps.lineItems || []).length > 0) return true;
+    if ((ps.addonIds || []).length > 0) return true;
+    const details = ps.details || {};
+    if (Object.values(details).some((v) => v != null && String(v).trim() !== '')) return true;
+    return false;
+  }
+
+  function resolveProviderWizardOpenStep(appt, opts = {}) {
+    if (opts.step) return opts.step;
+    return providerSessionInProgress(appt) ? 'checkout' : 'activity';
+  }
+
   function resolveProviderDraftForAppt(appt) {
     const flow = getProviderFlow(appt);
     if (appt?.providerSession?.activityId) {
@@ -1216,6 +1236,8 @@ window.StudioVisitFlow = (function () {
     resolveBookedServiceIds,
     resolveActivityForServices,
     resolveDefaultActivityForAppt,
+    providerSessionInProgress,
+    resolveProviderWizardOpenStep,
     resolveProviderDraftForAppt,
     isBillableAppointmentService,
     resolveApptBillableServices,

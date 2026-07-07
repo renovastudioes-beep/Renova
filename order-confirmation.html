@@ -33,7 +33,11 @@
       document.getElementById('confirmMsg').textContent = order?.customer?.email
         ? `We've received your order request. Our team will confirm final pricing and reach out at ${order.customer.email} before fulfillment.`
         : "We've received your order request. Our team will confirm final pricing and reach out before fulfillment.";
-      document.getElementById('confirmNote').textContent = 'Line-item pricing is handled privately by our team — you will not see dollar amounts on the public site until we send your quote.';
+      document.getElementById('confirmNote').textContent = 'Our team will confirm your quote and reach out before fulfillment.';
+    } else if (order?.total != null) {
+      document.getElementById('confirmMsg').textContent = order?.customer?.email
+        ? `Thank you. Order total ${'$' + Number(order.total).toFixed(2)}. Confirmation details will go to ${order.customer.email}. COA documents and tracking follow when your order ships.`
+        : `Thank you. Order total ${'$' + Number(order.total).toFixed(2)}. COA documents and tracking follow when your order ships.`;
     } else if (order?.customer?.email) {
       document.getElementById('confirmMsg').textContent =
         `Confirmation sent to ${order.customer.email}. COA documents and tracking will follow when your order ships.`;

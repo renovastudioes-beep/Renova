@@ -87,6 +87,7 @@
   let studioBookBeverage = '';
   let studioBookInspoPhotos = [];
   let studioBookVisitType = '';
+  let studioBookUsePrepaid = true;
   let studioBookClientId = '';
   let studioApptModalOpen = false;
   let studioIntakeWizardOpen = false;
@@ -116,6 +117,10 @@
   let studioPostVisitSource = null;
   let studioPostVisitAwaitingCheckout = false;
   let studioPostVisitPendingRebookApptId = null;
+  let studioPostVisitFollowUpSkipped = false;
+  let studioInactiveProgramModalOpen = false;
+  let studioInactiveProgramModalClientId = null;
+  let studioInactiveProgramModalData = null;
   let pendingPhotoUploadCtx = null;
   let activeCameraStream = null;
 
@@ -216,6 +221,9 @@
         return false;
       }
       studioNotify(`Refund of ${S.formatPrice(result.amount)} recorded.`, 'success');
+      if (result.needsInactiveProgramPrompt) {
+        openInactiveProgramApptModal(p.clientId, result.inactiveProgramBlocked);
+      }
     } else if (studioPosAuthAction === 'client_program') {
       const S = window.RenvoaStudios;
       const p = studioPosAuthPending || {};
@@ -226,6 +234,9 @@
         return false;
       }
       studioNotify('Program adjustments saved.', 'success');
+      if (p.data?.active === false) {
+        checkInactiveProgramFutureAppointments(p.clientId);
+      }
     } else if (studioPosAuthAction === 'client_warranty') {
       const S = window.RenvoaStudios;
       const p = studioPosAuthPending || {};
@@ -413,6 +424,16 @@
     renderView();
   }
 
+  /** Clinic ops live under activeView `studios`; only Finance P&L uses `finance`. */
+  function openClinicStudiosTab(subView) {
+    businessMode = 'clinic';
+    activeView = 'studios';
+    if (subView) studioSubView = subView;
+    studioFlash = '';
+    updateBusinessModeUI();
+    renderView();
+  }
+
   function captureInputFocus() {
     const active = document.activeElement;
     if (!active || !mainEl?.contains(active)) return null;
@@ -473,7 +494,9 @@
       selectedStudioClientId = null;
       return;
     }
-    if (!selectedStudioClientId || !S.getClient(selectedStudioClientId)) {
+    const selectedStillVisible = selectedStudioClientId
+      && list.some((c) => c.id === selectedStudioClientId);
+    if (!selectedStudioClientId || !S.getClient(selectedStudioClientId) || !selectedStillVisible) {
       selectedStudioClientId = list[0].id;
     }
   }
@@ -484,6 +507,7 @@
     if (!id || !S?.getClient(id)) return false;
     selectedStudioClientId = id;
     studioClientAdding = false;
+    checkInactiveProgramFutureAppointments(id);
     try {
       const mergeOptions = S.getMergeCandidatesForClient(id, '') || [];
       const selectedName = (S.getClient(id)?.name || '').trim().toLowerCase();
@@ -992,6 +1016,7 @@
       studioBookBeverage,
       studioBookInspoPhotos,
       studioBookVisitType,
+      studioBookUsePrepaid,
       studioBookClientId,
       studioApptModalOpen,
       studioIntakeWizardOpen,
@@ -1017,10 +1042,14 @@
       studioPhotoPromptKind,
       studioPhotoPromptApptId,
       studioPhotoPromptPending,
+      studioInactiveProgramModalOpen,
+      studioInactiveProgramModalClientId,
+      studioInactiveProgramModalData,
       studioPostVisitApptId,
       studioPostVisitSource,
       studioPostVisitAwaitingCheckout,
       studioPostVisitPendingRebookApptId,
+      studioPostVisitFollowUpSkipped,
       businessMode,
       clinicSideNav: businessMode === 'clinic',
     };
@@ -1181,6 +1210,66 @@
     studioPhotoPromptPending = pending || null;
   }
 
+  function openInactiveProgramApptModal(clientId, data) {
+    if (!clientId || !data?.appointments?.length) return;
+    studioInactiveProgramModalOpen = true;
+    studioInactiveProgramModalClientId = clientId;
+    studioInactiveProgramModalData = data;
+  }
+
+  function closeInactiveProgramApptModal() {
+    studioInactiveProgramModalOpen = false;
+    studioInactiveProgramModalClientId = null;
+    studioInactiveProgramModalData = null;
+  }
+
+  function checkInactiveProgramFutureAppointments(clientId) {
+    const S = window.RenvoaStudios;
+    if (!S || !clientId) return;
+    const blocked = S.getFuturePackageAppointmentsForInactivePrograms(clientId);
+    if (blocked.appointments.length) {
+      openInactiveProgramApptModal(clientId, blocked);
+      renderView();
+    }
+  }
+
+  function getPostVisitCheckoutCtx() {
+    return {
+      studioPostVisitApptId,
+      studioPostVisitAwaitingCheckout,
+      studioPosMode,
+      studioPosCart,
+      studioPostVisitPendingRebookApptId,
+      studioPostVisitFollowUpSkipped,
+    };
+  }
+
+  function assertPostVisitPaymentReady() {
+    const S = window.RenvoaStudios;
+    if (!studioPostVisitApptId || !studioPostVisitAwaitingCheckout || studioPosMode === 'walkin') {
+      return true;
+    }
+    const meta = window.RenvoaStudioUI?.getPostVisitFlowMeta?.(getPostVisitCheckoutCtx());
+    if (!meta) {
+      studioNotify('Finish visit checkout above before completing payment.', 'error');
+      return false;
+    }
+    if (meta.inactivePackageAppt || meta.inactiveFuture) {
+      studioNotify('Package is inactive — cancel future prepaid appointments or charge full retail price.', 'error');
+      checkInactiveProgramFutureAppointments(S.getAppointment(studioPostVisitApptId)?.clientId);
+      return false;
+    }
+    if (meta.step === 'apply_visit') {
+      studioNotify('Apply the prepaid visit before completing payment.', 'error');
+      return false;
+    }
+    if (meta.step === 'book_followup') {
+      studioNotify('Book follow-up or tap Skip follow-up before completing payment.', 'error');
+      return false;
+    }
+    return meta.step === 'complete_payment';
+  }
+
   function sendApptToRegisterForVisitClose(apptId, source) {
     const S = window.RenvoaStudios;
     const appt = S?.getAppointment(apptId);
@@ -1190,6 +1279,7 @@
     studioPostVisitSource = source || 'complete';
     studioPostVisitAwaitingCheckout = true;
     studioPostVisitPendingRebookApptId = null;
+    studioPostVisitFollowUpSkipped = false;
     const posItems = S.getPostVisitCheckoutCartItems(appt);
     studioPosCart = {
       clientName: appt.clientName,
@@ -1218,6 +1308,21 @@
     const source = studioPostVisitSource;
     if (!apptId || !S) return;
     const appt = S.getAppointment(apptId);
+    if (appt?.clientId && !appt.packageVisit) {
+      const followUp = S.getProgramFollowUpBooking(appt.clientId, {
+        serviceId: appt.serviceId,
+        extOptions: appt.extOptions,
+        programName: appt.programName,
+        programId: appt.programId,
+      });
+      const cartHasPkg = studioPosCart.items.some((i) => i.packageVisit);
+      if (followUp?.packageFields && !cartHasPkg) {
+        const proceed = window.confirm(
+          `${appt.clientName} has a prepaid visit on file that was not applied at the register. Complete the visit anyway without redeeming it?`,
+        );
+        if (!proceed) return;
+      }
+    }
     if (appt && source === 'complete' && appt.status !== 'completed') {
       S.updateAppointment(apptId, { status: 'completed' });
       window.StudioApptTimers?.tick();
@@ -1226,6 +1331,7 @@
     studioPostVisitSource = null;
     studioPostVisitAwaitingCheckout = false;
     studioPostVisitPendingRebookApptId = null;
+    studioPostVisitFollowUpSkipped = false;
   }
 
   function getPostVisitPackageExcludeIds() {
@@ -1285,6 +1391,12 @@
     const appt = S?.getAppointment(apptId);
     if (!appt?.clientId) {
       studioNotify('Link a client before applying a package visit.', 'error');
+      return;
+    }
+    const allowed = S.assertPackageVisitRedemptionAllowed(appt.clientId, appt.programId, apptId);
+    if (allowed.error) {
+      studioNotify(allowed.error, 'error');
+      if (allowed.needsCancelPrompt) checkInactiveProgramFutureAppointments(appt.clientId);
       return;
     }
     const fresh = S.refreshPackageVisitFields(appt.clientId, {
@@ -1822,25 +1934,30 @@
     maybeShowAllergyPopup(apptId);
     studioProviderWizardOpen = true;
     studioProviderApptId = apptId;
-    studioProviderStep = opts.step || (appt?.providerSession?.activityId ? 'checkout' : 'activity');
+    studioProviderStep = VF?.resolveProviderWizardOpenStep?.(appt, opts) || opts.step || 'activity';
     studioProviderDraft = VF?.resolveProviderDraftForAppt?.(appt)
       || { activityId: '', subs: [], details: {}, addonIds: [], lineItems: [], notes: '' };
   }
 
+  function providerWizardRoot() {
+    return document.getElementById('studioProviderModal') || mainEl;
+  }
+
   function syncProviderDraftFromDOM() {
     const VF = window.StudioVisitFlow;
-    const draft = studioProviderDraft || {};
+    const draft = { ...(studioProviderDraft || {}) };
     const activityId = draft.activityId;
+    const root = providerWizardRoot();
     const config = VF?.getActivityConfig?.(activityId) || {};
     const details = { ...(draft.details || {}) };
     (config.detailFields || []).forEach((field) => {
       const key = VF.getFieldKey(field);
-      const el = document.querySelector(`[data-provider-detail="${key}"]`);
+      const el = root.querySelector(`[data-provider-detail="${key}"]`);
       if (el) details[key] = el.value;
     });
     draft.details = details;
-    draft.notes = $('#providerSessionNotes')?.value?.trim() || draft.notes || '';
-    const primarySvc = document.querySelector('[data-provider-primary].active')?.dataset.providerPrimary;
+    draft.notes = root.querySelector('#providerSessionNotes')?.value?.trim() || draft.notes || '';
+    const primarySvc = root.querySelector('[data-provider-primary].active')?.dataset.providerPrimary;
     if (primarySvc) {
       const appt = window.RenvoaStudios?.getAppointment(studioProviderApptId);
       const suggested = VF?.getSuggestedBillableServices(appt, activityId) || [];
@@ -1850,51 +1967,173 @@
     studioProviderDraft = draft;
   }
 
+  function advanceProviderWizardStep() {
+    const S = window.RenvoaStudios;
+    const VF = window.StudioVisitFlow;
+    const steps = ['activity', 'subs', 'details', 'checkout', 'confirm'];
+    const idx = steps.indexOf(studioProviderStep);
+    if (studioProviderStep === 'activity' && !studioProviderDraft?.activityId) {
+      studioNotify('Select what the provider is doing today.', 'error');
+      return;
+    }
+    if (studioProviderStep === 'details') {
+      syncProviderDraftFromDOM();
+      const apptForCheckout = S.getAppointment(studioProviderApptId);
+      if (!studioProviderDraft?.lineItems?.length) {
+        studioProviderDraft = {
+          ...studioProviderDraft,
+          lineItems: VF?.resolveDefaultLineItems(apptForCheckout, studioProviderDraft?.activityId) || [],
+        };
+      }
+    }
+    if (studioProviderStep === 'checkout') {
+      syncProviderDraftFromDOM();
+      const appt = S.getAppointment(studioProviderApptId);
+      if (!studioProviderDraft?.lineItems?.length) {
+        studioProviderDraft = {
+          ...studioProviderDraft,
+          lineItems: VF?.resolveDefaultLineItems(appt, studioProviderDraft?.activityId) || [],
+        };
+      }
+      const hasCharges = (studioProviderDraft?.lineItems?.length || 0) > 0
+        || (studioProviderDraft?.addonIds?.length || 0) > 0
+        || appt?.packageVisit;
+      if (!hasCharges) {
+        studioNotify('Select a primary service for the register.', 'error');
+        return;
+      }
+    }
+    if (idx >= 0 && idx < steps.length - 1) studioProviderStep = steps[idx + 1];
+  }
+
   function finishProviderWizard() {
     const S = window.RenvoaStudios;
     const VF = window.StudioVisitFlow;
-    if (!S || !VF || !studioProviderApptId || !studioProviderDraft?.activityId) return;
-    syncProviderDraftFromDOM();
-    const appt = S.getAppointment(studioProviderApptId);
-    const flow = VF.getProviderFlow(appt);
-    const activity = VF.getActivity(flow, studioProviderDraft.activityId);
-    const lineItems = studioProviderDraft.lineItems?.length
-      ? studioProviderDraft.lineItems
-      : VF.resolveDefaultLineItems(appt, studioProviderDraft.activityId);
-    const session = {
-      activityId: studioProviderDraft.activityId,
-      activityLabel: activity?.label || studioProviderDraft.activityId,
-      subs: [...(studioProviderDraft.subs || [])],
-      details: { ...(studioProviderDraft.details || {}) },
-      addonIds: [...(studioProviderDraft.addonIds || [])],
-      lineItems: lineItems.map((li) => ({ ...li })),
-      notes: studioProviderDraft.notes || '',
-      startedAt: appt?.providerSession?.startedAt || new Date().toISOString(),
-    };
-    const checkoutTotal = VF.computeProviderCheckoutTotal(appt, session);
-    const sessionNote = VF.formatProviderSession(session);
-    const existingNotes = appt?.notes || '';
-    const visitNote = sessionNote ? `Provider session: ${sessionNote}` : '';
-    const mergedNotes = [existingNotes, visitNote].filter(Boolean).join('\n');
-    const draftAppt = { ...appt, providerSession: session };
-    const billablePrimary = VF.resolveApptPrimaryBillableService(draftAppt)
-      || (lineItems[0]?.serviceId ? S.getService(lineItems[0].serviceId) : null);
-    const apptId = studioProviderApptId;
-    S.updateAppointment(apptId, {
-      status: 'with_provider',
-      providerSession: session,
-      notes: mergedNotes,
-      price: checkoutTotal > 0 ? checkoutTotal : (appt?.price || billablePrimary?.price || 0),
-      serviceId: billablePrimary?.id || appt?.serviceId,
-      serviceName: billablePrimary ? S.shortName(billablePrimary.name) : appt?.serviceName,
-    });
-    closeProviderWizard();
-    const updated = S.getAppointment(apptId);
-    if (!updated?.beforePhotosAt) {
-      openPhotoPrompt(apptId, 'before', { type: 'provider_done' });
-    } else {
-      studioNotify(`With provider — ${activity?.label || 'session started'}`, 'success');
+    if (!S) {
+      studioNotify('Studio data did not load — refresh the page.', 'error');
+      return false;
     }
+    if (!VF) {
+      studioNotify('Visit flow module did not load — refresh the page.', 'error');
+      return false;
+    }
+    if (!studioProviderApptId) {
+      studioNotify('No appointment linked to this provider session.', 'error');
+      return false;
+    }
+    if (!studioProviderDraft?.activityId) {
+      studioNotify('Select what the provider is doing before starting the session.', 'error');
+      studioProviderStep = 'activity';
+      return false;
+    }
+    try {
+      syncProviderDraftFromDOM();
+      const appt = S.getAppointment(studioProviderApptId);
+      if (!appt) {
+        studioNotify('Appointment not found — it may have been removed.', 'error');
+        closeProviderWizard();
+        return false;
+      }
+      if (S.needsIntake(appt)) {
+        studioNotify('Complete or skip new client intake before starting the provider session.', 'error');
+        openIntakeWizard(studioProviderApptId);
+        return false;
+      }
+      if (!studioProviderDraft.lineItems?.length) {
+        studioProviderDraft = {
+          ...studioProviderDraft,
+          lineItems: VF.resolveDefaultLineItems(appt, studioProviderDraft.activityId) || [],
+        };
+      }
+      const hasCharges = (studioProviderDraft.lineItems?.length || 0) > 0
+        || (studioProviderDraft.addonIds?.length || 0) > 0
+        || appt.packageVisit;
+      if (!hasCharges) {
+        studioNotify('Select a primary service or add-on for the register.', 'error');
+        studioProviderStep = 'checkout';
+        return false;
+      }
+      const flow = VF.getProviderFlow(appt);
+      const activity = VF.getActivity(flow, studioProviderDraft.activityId);
+      const lineItems = studioProviderDraft.lineItems?.length
+        ? studioProviderDraft.lineItems
+        : VF.resolveDefaultLineItems(appt, studioProviderDraft.activityId);
+      const session = {
+        activityId: studioProviderDraft.activityId,
+        activityLabel: activity?.label || studioProviderDraft.activityId,
+        subs: [...(studioProviderDraft.subs || [])],
+        details: { ...(studioProviderDraft.details || {}) },
+        addonIds: [...(studioProviderDraft.addonIds || [])],
+        lineItems: lineItems.map((li) => ({ ...li })),
+        notes: studioProviderDraft.notes || '',
+        startedAt: appt.providerSession?.startedAt || new Date().toISOString(),
+      };
+      const checkoutTotal = VF.computeProviderCheckoutTotal(appt, session);
+      const sessionNote = VF.formatProviderSession(session);
+      const existingNotes = appt.notes || '';
+      const visitNote = sessionNote ? `Provider session: ${sessionNote}` : '';
+      const mergedNotes = [existingNotes, visitNote].filter(Boolean).join('\n');
+      const draftAppt = { ...appt, providerSession: session };
+      const billablePrimary = VF.resolveApptPrimaryBillableService(draftAppt)
+        || (lineItems[0]?.serviceId ? S.getService(lineItems[0].serviceId) : null);
+      const apptId = studioProviderApptId;
+      const saved = S.updateAppointment(apptId, {
+        status: 'with_provider',
+        providerSession: session,
+        notes: mergedNotes,
+        price: checkoutTotal > 0 ? checkoutTotal : (appt.price || billablePrimary?.price || 0),
+        serviceId: billablePrimary?.id || appt.serviceId,
+        serviceName: billablePrimary ? S.shortName(billablePrimary.name) : appt.serviceName,
+      });
+      if (!saved) {
+        studioNotify('Could not save provider session — try again.', 'error');
+        return false;
+      }
+      closeProviderWizard();
+      window.StudioApptTimers?.tick();
+      if (!saved.beforePhotosAt) {
+        openPhotoPrompt(apptId, 'before', { type: 'provider_done' });
+      } else {
+        studioNotify(`With provider — ${activity?.label || 'session started'}`, 'success');
+      }
+      return true;
+    } catch (err) {
+      console.error('finishProviderWizard failed:', err);
+      studioNotify('Could not start provider session — refresh and try again.', 'error');
+      return false;
+    }
+  }
+
+  function bindProviderWizardDelegation() {
+    if (!mainEl || mainEl.dataset.providerWizardDelegation) return;
+    mainEl.dataset.providerWizardDelegation = '1';
+    mainEl.addEventListener('click', (e) => {
+      if (!studioProviderWizardOpen) return;
+      if (e.target.closest('[data-provider-close]')) {
+        e.preventDefault();
+        closeProviderWizard();
+        renderView();
+        return;
+      }
+      if (e.target.closest('#providerWizardBack')) {
+        e.preventDefault();
+        const steps = ['activity', 'subs', 'details', 'checkout', 'confirm'];
+        const idx = steps.indexOf(studioProviderStep);
+        if (idx > 0) studioProviderStep = steps[idx - 1];
+        renderView();
+        return;
+      }
+      if (e.target.closest('#providerWizardNext')) {
+        e.preventDefault();
+        advanceProviderWizardStep();
+        renderView();
+        return;
+      }
+      if (e.target.closest('#providerWizardFinish')) {
+        e.preventDefault();
+        if (finishProviderWizard()) renderView();
+      }
+    });
   }
 
   function finishIntakeWizard(opts = {}) {
@@ -1963,6 +2202,7 @@
     studioBookWizardOpen = false;
     studioBookWizardStep = 'when';
     studioBookVisitType = '';
+    studioBookUsePrepaid = true;
     studioBookClientId = '';
     closeProgramModal();
   }
@@ -1991,12 +2231,19 @@
   }
 
   function bookWizardBookingOpts(overrides = {}) {
+    const S = window.RenvoaStudios;
     const needsSvc = ['barber', 'salon'].includes(studioBookVisitType);
+    const nonPackage = studioBookVisitType && S?.getNonPackageVisitType(studioBookVisitType);
+    const svc = S?.getService(studioApptServiceId);
+    const usePrepaid = nonPackage || studioBookUsePrepaid === false || svc?.isPackage
+      ? false
+      : undefined;
     return {
       visitTypeId: studioBookVisitType || undefined,
       gender: studioBookGender,
-      bookServiceId: needsSvc ? (studioApptServiceId || undefined) : undefined,
+      bookServiceId: needsSvc ? (studioApptServiceId || undefined) : (svc?.isPackage ? studioApptServiceId : undefined),
       requireService: needsSvc,
+      usePrepaid,
       ...overrides,
     };
   }
@@ -2056,10 +2303,11 @@
       const bookClient = getBookWizardClient(true);
       if (!bookClient) return 'Enter client details first.';
       const program = S.findActiveProgramForBooking(bookClient.id);
-      if (program && (program.visitsRemaining || 0) > 0 && !studioBookVisitType) {
+      const nonPackage = studioBookVisitType && S.getNonPackageVisitType(studioBookVisitType);
+      if (program && (program.visitsRemaining || 0) > 0 && studioBookUsePrepaid !== false && !nonPackage && !studioBookVisitType) {
         const types = S.getScheduleVisitTypes(program.category);
         if (types[0]) studioBookVisitType = types[0].id;
-      } else if (!program && !studioBookVisitType) {
+      } else if ((!program || studioBookUsePrepaid === false || nonPackage) && !studioBookVisitType) {
         studioBookVisitType = 'consult';
       }
       primeNonPackageServiceForVisitType();
@@ -2077,7 +2325,8 @@
     const bookClient = getBookWizardClient(true);
     if (!bookClient) return;
     const program = S.findActiveProgramForBooking(bookClient.id);
-    if (program && (program.visitsRemaining || 0) > 0) {
+    const nonPackage = studioBookVisitType && S.getNonPackageVisitType(studioBookVisitType);
+    if (program && (program.visitsRemaining || 0) > 0 && studioBookUsePrepaid !== false && !nonPackage) {
       if (!studioBookVisitType) {
         studioBookVisitType = S.getScheduleVisitTypes(program.category)[0]?.id || '';
       }
@@ -2122,7 +2371,8 @@
       return false;
     }
     const program = S.findActiveProgramForBooking(client.id);
-    if (program && (program.visitsRemaining || 0) > 0 && !studioBookVisitType) {
+    const nonPackage = studioBookVisitType && S.getNonPackageVisitType(studioBookVisitType);
+    if (program && (program.visitsRemaining || 0) > 0 && !nonPackage && studioBookUsePrepaid !== false && !studioBookVisitType) {
       const types = S.getScheduleVisitTypes(program.category);
       if (types[0]) studioBookVisitType = types[0].id;
     }
@@ -2154,7 +2404,7 @@
       intendedService: booking.intendedService || '',
       fromPriceDisplay: booking.fromPriceDisplay || '',
       packageVisit: booking.mode === 'package_followup' ? true : false,
-      packagePurchase: false,
+      packagePurchase: booking.mode !== 'package_followup' && !!(S.getService(booking.serviceId)?.isPackage || booking.extOptions?.family),
       programId: pkg.programId || '',
       programName: pkg.programName || '',
       programPaymentPlan: pkg.programPaymentPlan || '',
@@ -2191,6 +2441,7 @@
     studioApptServiceId = null;
     studioExtOptions = null;
     studioBookVisitType = '';
+    studioBookUsePrepaid = true;
     closeBookWizard();
     const bookedMsg = result.packageVisit
       ? `Booked prepaid visit ${result.visitNumber}/${result.visitsIncluded} for ${result.clientName} at ${S.formatTime12(result.startTime)}`
@@ -2361,12 +2612,8 @@
 
     $$('[data-studio-tab]').forEach((el) => {
       el.addEventListener('click', () => {
-        businessMode = 'clinic';
-        studioSubView = el.dataset.studioTab;
         if (el.dataset.studioAddClient) studioClientAdding = true;
-        studioFlash = '';
-        updateBusinessModeUI();
-        renderView();
+        openClinicStudiosTab(el.dataset.studioTab);
       });
     });
 
@@ -2374,9 +2621,21 @@
       el.addEventListener('click', () => {
         const appt = S.getAppointment(el.dataset.studioApptDash);
         if (!appt) return;
+        activeView = 'studios';
         studioSubView = 'calendar';
         studioCalendarDate = appt.date;
         openApptModal(appt.id);
+        renderView();
+      });
+    });
+
+    $$('[data-mark-booking-reviewed]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const apptId = btn.dataset.markBookingReviewed;
+        if (!apptId) return;
+        S.markBookingReviewed(apptId);
+        studioNotify('Booking marked as contacted.', 'success');
         renderView();
       });
     });
@@ -2385,6 +2644,7 @@
       el.addEventListener('click', () => {
         const client = S.getClient(el.dataset.studioNeedsBook);
         if (!client) return;
+        activeView = 'studios';
         studioSubView = 'calendar';
         studioCalendarDate = S.todayISO();
         studioBookClientName = client.name;
@@ -2400,6 +2660,7 @@
 
     $$('[data-studio-birthday-client]').forEach((el) => {
       el.addEventListener('click', () => {
+        activeView = 'studios';
         studioSubView = 'clients';
         studioClientTab = 'overview';
         if (selectStudioClient(el.dataset.studioBirthdayClient)) renderView();
@@ -2469,6 +2730,40 @@
       });
     });
 
+    $$('[data-book-use-nonpackage]').forEach((el) => {
+      el.addEventListener('click', () => {
+        if (!studioBookWizardOpen) return;
+        studioBookUsePrepaid = false;
+        studioBookVisitType = 'consult';
+        const consult = S.getSystemConsultationService(studioBookGender);
+        studioApptServiceId = consult?.id || 'c5';
+        studioNotify('Booking a paid visit — prepaid visit will not be used.', 'info');
+        renderView();
+      });
+    });
+
+    $$('[data-book-use-prepaid]').forEach((el) => {
+      el.addEventListener('click', () => {
+        if (!studioBookWizardOpen) return;
+        const bookClient = getBookWizardClient(true);
+        if (!bookClient) {
+          studioNotify('Enter client details first.', 'error');
+          return;
+        }
+        const program = S.findActiveProgramForBooking(bookClient.id);
+        if (!program || (program.visitsRemaining || 0) <= 0) {
+          studioNotify('No prepaid visits remaining on this account.', 'error');
+          return;
+        }
+        studioBookUsePrepaid = true;
+        studioBookVisitType = S.getScheduleVisitTypes(program.category)[0]?.id || '';
+        const booking = S.resolveCalendarBooking(bookClient.id, bookWizardBookingOpts({ requireService: false }));
+        if (booking?.serviceId) studioApptServiceId = booking.serviceId;
+        studioNotify(`Using prepaid visit on ${program.programName}.`, 'success');
+        renderView();
+      });
+    });
+
     $$('[data-book-visit-type]').forEach((el) => {
       el.addEventListener('click', () => {
         if (!studioBookWizardOpen) return;
@@ -2478,10 +2773,15 @@
           return;
         }
         studioBookVisitType = el.dataset.bookVisitType;
+        if (S.getNonPackageVisitType(studioBookVisitType)) {
+          studioBookUsePrepaid = false;
+        } else {
+          studioBookUsePrepaid = true;
+        }
         if (studioBookVisitType === 'consult') {
           const consult = S.getSystemConsultationService(studioBookGender);
           studioApptServiceId = consult?.id || 'c5';
-        } else {
+        } else if (S.getNonPackageVisitType(studioBookVisitType)) {
           primeNonPackageServiceForVisitType();
         }
         const booking = S.resolveCalendarBooking(bookClient.id, bookWizardBookingOpts({ requireService: false }));
@@ -2992,6 +3292,10 @@
 
     $('#posCheckoutBtn')?.addEventListener('click', () => {
       if (!studioPosCart.items.length) return;
+      if (!assertPostVisitPaymentReady()) {
+        renderView();
+        return;
+      }
       const grossSubtotal = studioPosCart.items.reduce((s, i) => s + i.price * (i.qty || 1), 0);
       const discount = Math.min(studioPosCart.discount || 0, grossSubtotal);
       const netSubtotal = Math.max(0, grossSubtotal - discount);
@@ -3049,7 +3353,20 @@
       const total = Math.max(0, netSubtotal - creditToApply);
       if (creditToApply > 0) noteParts.push(`Studio credit applied: ${S.formatPrice(creditToApply)}`);
       const postVisitApptId = studioPostVisitApptId;
-      const pkgCartItem = studioPosCart.items.find((i) => i.packageVisit);
+      const pkgCartItems = studioPosCart.items.filter((i) => i.packageVisit);
+      if (pkgCartItems.length) {
+        const blocked = S.assertPackageVisitRedemptionAllowed(client.id, pkgCartItems[0].programId, postVisitApptId || pkgCartItems[0].postVisitApptId);
+        if (blocked.error) {
+          studioNotify(blocked.error, 'error');
+          if (blocked.needsCancelPrompt) checkInactiveProgramFutureAppointments(client.id);
+          renderView();
+          return;
+        }
+      }
+      const warrantyCartItems = studioPosCart.items.filter((i) => i.warrantyReinstatement);
+      warrantyCartItems.forEach((item) => {
+        noteParts.push(`Warranty reinstated — ${item.programName}`);
+      });
       const tx = S.createTransaction({
         clientId: client.id,
         clientName: name,
@@ -3059,12 +3376,11 @@
         creditApplied: creditToApply,
         total,
         paymentMethod: $('#posPaymentMethod')?.value || 'card',
-        appointmentId: postVisitApptId || pkgCartItem?.postVisitApptId || '',
+        appointmentId: postVisitApptId || pkgCartItems[0]?.postVisitApptId || '',
         notes: noteParts.join(' · '),
       });
-      const warrantyCartItems = studioPosCart.items.filter((i) => i.warrantyReinstatement);
       warrantyCartItems.forEach((item) => {
-        const row = S.recordWarrantyReinstatement({
+        S.recordWarrantyReinstatement({
           clientId: client.id,
           programId: item.programId,
           programName: item.programName,
@@ -3077,10 +3393,10 @@
           daysLate: item.daysLate,
           notes: `Reinstated at POS — ${S.formatPrice(item.price)}`,
         });
-        if (row) noteParts.push(`Warranty reinstated — ${item.programName}`);
       });
-      if (pkgCartItem && (postVisitApptId || pkgCartItem.postVisitApptId)) {
+      pkgCartItems.forEach((pkgCartItem) => {
         const redeemApptId = postVisitApptId || pkgCartItem.postVisitApptId;
+        if (!redeemApptId) return;
         const redeem = S.redeemPackageVisitOnAppointment(redeemApptId, {
           programId: pkgCartItem.programId,
           programName: pkgCartItem.programName,
@@ -3094,9 +3410,9 @@
         if (redeem?.error) {
           studioNotify(redeem.error, 'warn');
         } else if (redeem?.fields) {
-          noteParts.push(`Prepaid visit ${redeem.fields.visitNumber}/${redeem.fields.visitsIncluded} redeemed`);
+          studioNotify(`Prepaid visit ${redeem.fields.visitNumber}/${redeem.fields.visitsIncluded} redeemed.`, 'success');
         }
-      }
+      });
       if (creditToApply > 0) {
         S.applyClientCredit(client.id, creditToApply, {
           transactionId: tx.id,
@@ -3110,20 +3426,13 @@
       studioPresentOpen = false;
       closePosAuthModal();
       if (hadPostVisit) {
-        const postVisitSource = studioPostVisitSource;
         finishPostVisitCheckout();
+        studioSubView = 'transactions';
+        selectedStudioTransactionId = tx.id;
         if (pendingRebookApptId) {
-          studioSubView = 'calendar';
-          studioNotify('Sale recorded — follow-up is on the calendar.', 'success');
+          studioNotify(`Payment complete — visit done, follow-up on calendar. ${S.formatPrice(total)} collected.`, 'success');
         } else {
-          studioSubView = 'calendar';
-          if (openFollowUpScheduler(postVisitApptId, { source: postVisitSource })) {
-            studioNotify('Sale recorded — schedule their follow-up visit.', 'success');
-          } else {
-            studioSubView = 'transactions';
-            selectedStudioTransactionId = tx.id;
-            studioNotify('Sale recorded — visit complete.', 'success');
-          }
+          studioNotify(`Payment complete — visit done. ${S.formatPrice(total)} collected.`, 'success');
         }
       } else {
         studioSubView = 'transactions';
@@ -3309,7 +3618,7 @@
         if (flow === 'checkin') handleCheckIn(apptId);
         else if (flow === 'provider') {
           const appt = S.getAppointment(apptId);
-          openProviderWizard(apptId, appt?.providerSession?.activityId ? { step: 'checkout' } : {});
+          openProviderWizard(apptId, window.StudioVisitFlow?.providerSessionInProgress?.(appt) ? { step: 'checkout' } : {});
         }
         renderView();
       });
@@ -3325,13 +3634,6 @@
     $$('[data-intake-close]').forEach((el) => {
       el.addEventListener('click', () => {
         closeIntakeWizard();
-        renderView();
-      });
-    });
-
-    $$('[data-provider-close]').forEach((el) => {
-      el.addEventListener('click', () => {
-        closeProviderWizard();
         renderView();
       });
     });
@@ -3507,59 +3809,6 @@
       });
     });
 
-    $('#providerWizardBack')?.addEventListener('click', () => {
-      const steps = ['activity', 'subs', 'details', 'checkout', 'confirm'];
-      const idx = steps.indexOf(studioProviderStep);
-      if (idx > 0) studioProviderStep = steps[idx - 1];
-      renderView();
-    });
-
-    $('#providerWizardNext')?.addEventListener('click', () => {
-      const VF = window.StudioVisitFlow;
-      const steps = ['activity', 'subs', 'details', 'checkout', 'confirm'];
-      const idx = steps.indexOf(studioProviderStep);
-      if (studioProviderStep === 'activity' && !studioProviderDraft?.activityId) {
-        studioNotify('Select what the provider is doing today.', 'error');
-        renderView();
-        return;
-      }
-      if (studioProviderStep === 'details') {
-        syncProviderDraftFromDOM();
-        const apptForCheckout = S.getAppointment(studioProviderApptId);
-        if (!studioProviderDraft?.lineItems?.length) {
-          studioProviderDraft = {
-            ...studioProviderDraft,
-            lineItems: VF?.resolveDefaultLineItems(apptForCheckout, studioProviderDraft?.activityId) || [],
-          };
-        }
-      }
-      if (studioProviderStep === 'checkout') {
-        syncProviderDraftFromDOM();
-        const appt = S.getAppointment(studioProviderApptId);
-        if (!studioProviderDraft?.lineItems?.length) {
-          studioProviderDraft = {
-            ...studioProviderDraft,
-            lineItems: VF?.resolveDefaultLineItems(appt, studioProviderDraft?.activityId) || [],
-          };
-        }
-        const hasCharges = (studioProviderDraft?.lineItems?.length || 0) > 0
-          || (studioProviderDraft?.addonIds?.length || 0) > 0
-          || appt?.packageVisit;
-        if (!hasCharges) {
-          studioNotify('Select a primary service for the register.', 'error');
-          renderView();
-          return;
-        }
-      }
-      if (idx >= 0 && idx < steps.length - 1) studioProviderStep = steps[idx + 1];
-      renderView();
-    });
-
-    $('#providerWizardFinish')?.addEventListener('click', () => {
-      finishProviderWizard();
-      renderView();
-    });
-
     $$('[data-appt-quick]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const status = btn.dataset.apptQuick;
@@ -3636,6 +3885,27 @@
       renderView();
     });
 
+    $('#cancelInactiveProgramApptsBtn')?.addEventListener('click', () => {
+      const clientId = $('#cancelInactiveProgramApptsBtn')?.dataset.client;
+      if (!clientId) return;
+      const result = S.cancelFuturePackageAppointmentsForInactivePrograms(clientId);
+      closeInactiveProgramApptModal();
+      studioNotify(
+        result.canceled
+          ? `Canceled ${result.canceled} future prepaid appointment${result.canceled !== 1 ? 's' : ''}.`
+          : 'No appointments were canceled.',
+        result.canceled ? 'success' : 'info',
+      );
+      renderView();
+    });
+
+    $$('[data-inactive-program-close]').forEach((el) => {
+      el.addEventListener('click', () => {
+        closeInactiveProgramApptModal();
+        renderView();
+      });
+    });
+
     $$('[data-pos-warranty-reinstate]').forEach((el) => {
       el.addEventListener('click', () => {
         const programId = el.dataset.posWarrantyReinstate;
@@ -3700,6 +3970,13 @@
       renderView();
     });
 
+    $('#posSkipFollowUpBtn')?.addEventListener('click', () => {
+      studioPostVisitFollowUpSkipped = true;
+      closeRebookModal();
+      studioNotify('Skipped follow-up — complete payment when ready.', 'info');
+      renderView();
+    });
+
     $('#posUseVisitTodayBtn')?.addEventListener('click', () => {
       const apptId = studioPostVisitApptId;
       const source = studioPostVisitSource;
@@ -3733,9 +4010,8 @@
     });
 
     $('#posFinishVisitBtn')?.addEventListener('click', () => {
-      finishPostVisitCheckout();
-      studioSubView = 'calendar';
-      studioNotify('Visit complete.', 'success');
+      studioPostVisitFollowUpSkipped = true;
+      studioNotify('Skipped follow-up — complete payment when ready.', 'info');
       renderView();
     });
 
@@ -3756,6 +4032,13 @@
     });
 
     $('#skipRebookBtn')?.addEventListener('click', () => {
+      if (studioPostVisitAwaitingCheckout && studioPostVisitApptId) {
+        studioPostVisitFollowUpSkipped = true;
+        closeRebookModal();
+        studioNotify('Skipped follow-up — complete payment when ready.', 'info');
+        renderView();
+        return;
+      }
       finishRebookPendingAction();
       renderView();
     });
@@ -4929,6 +5212,8 @@
           selectedOrderId = el.dataset.order;
         }
         if (el.dataset.studioTab) {
+          businessMode = 'clinic';
+          activeView = 'studios';
           studioSubView = el.dataset.studioTab;
         }
         if (el.dataset.prefillName) {
@@ -5371,6 +5656,8 @@
       if (selectStudioClient(card.dataset.studioClient)) renderView();
     });
 
+    bindProviderWizardDelegation();
+
     $('#logoutBtn')?.addEventListener('click', () => {
       A?.logout();
       renderLogin();
@@ -5403,11 +5690,7 @@
           renderView();
           return;
         }
-        businessMode = 'clinic';
-        studioSubView = btn.dataset.clinicTab;
-        studioFlash = '';
-        updateBusinessModeUI();
-        renderView();
+        openClinicStudiosTab(btn.dataset.clinicTab);
       });
     });
 

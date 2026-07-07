@@ -55,6 +55,96 @@ window.RenvoaStudioUI = (function () {
     return `<span class="studio-cal-pkg-badge" title="${esc(appt.programName || 'Prepaid visit')}">${esc(label)}</span>`;
   }
 
+  function onlineBookingBadge(appt) {
+    if (!S()?.isOnlineBookingSource?.(appt?.source)) return '';
+    const label = S().getOnlineBookingSourceLabel(appt.source) || 'Online';
+    return `<span class="studio-cal-online-badge" title="${esc(label)} booking">${esc(label === 'Client portal' ? 'Portal' : label)}</span>`;
+  }
+
+  function bookingPrepBadge(appt) {
+    if (!S()?.appointmentHasBookingPrep?.(appt)) return '';
+    const photoCount = S().getAppointmentInspoPhotos(appt).length;
+    const title = photoCount ? `${photoCount} inspo photo${photoCount !== 1 ? 's' : ''} & preferences` : 'Client shared preferences';
+    return `<span class="studio-cal-prep-badge" title="${esc(title)}">📷</span>`;
+  }
+
+  function renderBookingInspoThumb(photo) {
+    if (!photo?.dataUrl) return '';
+    return `
+      <a href="${esc(photo.dataUrl)}" target="_blank" rel="noopener" class="studio-book-inspo-thumb" title="${esc(photo.name || 'Inspiration photo')}">
+        <img src="${esc(photo.dataUrl)}" alt="${esc(photo.name || 'Inspiration')}" loading="lazy">
+      </a>`;
+  }
+
+  function renderAppointmentBookingPrepPanel(appt) {
+    if (!appt) return '';
+    const prefs = appt.clientPreferences || {};
+    const photos = S().getAppointmentInspoPhotos(appt);
+    const hasPrefs = !!String(prefs.hairLikes || '').trim()
+      || !!String(prefs.hairDislikes || '').trim()
+      || !!String(prefs.priorServices || '').trim()
+      || !!String(prefs.beverageLabel || '').trim();
+    const isOnline = S().isOnlineBookingSource(appt.source);
+    const needsContact = isOnline && !appt.bookingReviewedAt && appt.status === 'scheduled';
+    if (!photos.length && !hasPrefs && !isOnline) return '';
+
+    const sourceLabel = S().getOnlineBookingSourceLabel(appt.source);
+    const contactBits = [
+      appt.clientPhone ? `<a href="tel:${esc(appt.clientPhone.replace(/\D/g, ''))}" class="studio-appt-contact-link">${esc(appt.clientPhone)}</a>` : '',
+      appt.clientEmail ? `<a href="mailto:${esc(appt.clientEmail)}" class="studio-appt-contact-link">${esc(appt.clientEmail)}</a>` : '',
+    ].filter(Boolean);
+
+    return `
+      <div class="studio-appt-booking-prep${needsContact ? ' studio-appt-booking-prep--new' : ''}">
+        <div class="studio-appt-booking-prep-head">
+          <div>
+            <span class="studio-appt-booking-prep-eyebrow">${needsContact ? 'New online booking' : 'Booking details from client'}</span>
+            <strong>${sourceLabel ? `${esc(sourceLabel)} · ` : ''}${needsContact ? 'Contact before visit' : 'Shared at booking'}</strong>
+          </div>
+          ${needsContact ? `<button type="button" class="btn-secondary btn-sm" data-mark-booking-reviewed="${esc(appt.id)}">Mark contacted</button>` : ''}
+        </div>
+        ${needsContact && contactBits.length ? `<p class="studio-appt-booking-contact">${contactBits.join(' · ')}</p>` : ''}
+        ${hasPrefs ? `
+          <div class="studio-appt-booking-prefs">
+            ${prefs.hairLikes ? `<div class="studio-appt-booking-pref"><span>Likes</span><p>${esc(prefs.hairLikes)}</p></div>` : ''}
+            ${prefs.hairDislikes ? `<div class="studio-appt-booking-pref"><span>Avoid</span><p>${esc(prefs.hairDislikes)}</p></div>` : ''}
+            ${prefs.priorServices ? `<div class="studio-appt-booking-pref"><span>Prior services</span><p>${esc(prefs.priorServices)}</p></div>` : ''}
+            ${prefs.beverageLabel ? `<div class="studio-appt-booking-pref"><span>21+ beverage</span><p>${esc(prefs.beverageLabel)}</p></div>` : ''}
+          </div>` : ''}
+        ${photos.length ? `
+          <div class="studio-appt-booking-photos">
+            <span class="studio-appt-booking-photos-label">Inspiration photos (${photos.length})</span>
+            <div class="studio-book-inspo-preview studio-book-inspo-preview--appt">
+              ${photos.map((p) => renderBookingInspoThumb(p)).join('')}
+            </div>
+          </div>` : ''}
+      </div>`;
+  }
+
+  function renderDashboardOnlineBookingItem(appt) {
+    const photos = S().getAppointmentInspoPhotos(appt);
+    const prefs = appt.clientPreferences || {};
+    const sourceLabel = S().getOnlineBookingSourceLabel(appt.source) || 'Online';
+    const contact = [appt.clientPhone, appt.clientEmail].filter(Boolean).join(' · ');
+    const prefBits = [
+      photos.length ? `${photos.length} photo${photos.length !== 1 ? 's' : ''}` : '',
+      prefs.hairLikes ? 'likes noted' : '',
+      prefs.hairDislikes ? 'avoid list' : '',
+      prefs.priorServices ? 'prior services' : '',
+      prefs.beverageLabel || '',
+    ].filter(Boolean);
+    return `
+      <li class="studio-timeline-click studio-online-booking-item" data-studio-appt-dash="${esc(appt.id)}">
+        <span class="studio-online-booking-tag">${esc(sourceLabel)}</span>
+        <div>
+          <strong>${esc(appt.clientName)}${firstVisitBadge(appt.clientId, appt.clientPhone)}</strong>
+          <span>${esc(fmtDate(appt.date))} · ${esc(fmtTime12(appt.startTime))} · ${esc(appt.serviceName)}${contact ? ` · ${esc(contact)}` : ''}</span>
+          ${prefBits.length ? `<small>${esc(prefBits.join(' · '))}</small>` : ''}
+        </div>
+        <span class="studio-online-booking-action">Review →</span>
+      </li>`;
+  }
+
   function renderPackageVisitBanner(appt) {
     if (!appt?.packageVisit) return '';
     const checkout = S().getAppointmentCheckoutDisplay(appt);
@@ -116,7 +206,7 @@ window.RenvoaStudioUI = (function () {
             <small>Apply package visit to zero out today&apos;s visit</small>
           </p>` : ''}
         ${programs.map((p) => `
-          <div class="studio-pos-program-row${p.voided || p.refunded ? ' is-inactive' : ''}">
+          <div class="studio-pos-program-row${!S().isProgramEnrollmentActive(p) || p.voided || p.refunded ? ' is-inactive' : ''}">
             <div class="studio-pos-program-row-head">
               <strong>${esc(p.programName)}</strong>
               ${renderProgramEnrollmentBadge(p)}
@@ -149,13 +239,16 @@ window.RenvoaStudioUI = (function () {
 
   function clientProgramLine(clientId) {
     const summary = S().getClientProgramSummary(clientId);
-    if (summary.programs.length) {
-      const p = summary.programs[summary.programs.length - 1];
+    const activePrograms = (summary.programs || []).filter((p) => S().isProgramEnrollmentActive(p));
+    const displayPrograms = activePrograms.length ? activePrograms : summary.programs;
+    if (displayPrograms.length) {
+      const p = activePrograms[0] || displayPrograms[displayPrograms.length - 1];
       const visits = p.visitsIncluded
         ? ` · ${p.visitsUsed}/${p.visitsIncluded} used${p.visitsScheduled ? ` · ${p.visitsScheduled} scheduled` : ''}`
         : '';
       const warranty = p.warranty?.needsReinstatement ? ' · warranty lapsed' : (p.warranty?.status === 'grace' ? ' · warranty grace' : '');
-      return esc(p.programName) + visits + warranty;
+      const inactiveNote = !S().isProgramEnrollmentActive(p) ? ` · ${p.enrollmentLabel || 'Inactive'}` : '';
+      return esc(p.programName) + visits + warranty + inactiveNote;
     }
     if (summary.consultFor) {
       return `Consult for — ${esc(summary.consultFor.programName)}`;
@@ -531,6 +624,8 @@ window.RenvoaStudioUI = (function () {
   function renderApptBlock(a, gridStyle, compact) {
     const color = S().APPT_STATUS[a.status]?.color || '#2563EB';
     const webBadge = a.source === 'website' ? '<span class="studio-cal-web-badge">Web</span>' : '';
+    const onlineBadge = onlineBookingBadge(a);
+    const prepBadge = bookingPrepBadge(a);
     const newBadge = firstVisitBadge(a.clientId, a.clientPhone);
     const movable = apptMovable(a.status);
     const statusClass = a.status ? ` studio-cal-status-${a.status.replace('_', '-')}` : '';
@@ -549,7 +644,7 @@ window.RenvoaStudioUI = (function () {
       <span class="studio-cal-status-pulse" aria-hidden="true"></span>
       ${movable ? '<span class="studio-cal-drag-handle" data-cal-drag-handle title="Drag to move">⋮⋮</span>' : ''}
       <div class="studio-cal-block-body">
-        <strong>${esc(a.clientName)}${newBadge}${intakeSkippedBadge(a)}${allergyAlertBadge(a)}${packageVisitBadge(a)}${webBadge}</strong>
+        <strong>${esc(a.clientName)}${newBadge}${intakeSkippedBadge(a)}${allergyAlertBadge(a)}${packageVisitBadge(a)}${onlineBadge || webBadge}${prepBadge}</strong>
         ${compact
           ? `<small>${esc(fmtTime12(a.startTime))}</small>`
           : `<small>${esc(a.scheduledVisitType || (a.packageVisit ? a.programName || a.serviceName : (a.intendedService || a.serviceName)))}</small>
@@ -1032,17 +1127,22 @@ window.RenvoaStudioUI = (function () {
         <input type="hidden" id="apptService" value="">`;
     }
 
-    if (program && (program.visitsRemaining || 0) > 0) {
+    const nonPackageTypes = S().getNonPackageVisitTypes().map((t) => t.id);
+    const usingNonPackage = ctx.studioBookUsePrepaid === false
+      || (visitTypeId && nonPackageTypes.includes(visitTypeId));
+
+    if (program && (program.visitsRemaining || 0) > 0 && !usingNonPackage) {
       const types = S().getScheduleVisitTypes(program.category);
       const activeTypeId = visitTypeId || types[0]?.id || '';
-      const draft = S().resolveCalendarBooking(clientId, { visitTypeId: activeTypeId });
+      const draft = S().resolveCalendarBooking(clientId, { visitTypeId: activeTypeId, programId: program.id });
       return `
         <div class="studio-book-visit-context">
           <p class="studio-glass-hint studio-glass-hint-credit">
             <strong>${esc(program.programName)}</strong> — ${program.visitsRemaining} prepaid visit${program.visitsRemaining !== 1 ? 's' : ''} remaining
           </p>
+          <button type="button" class="link-cta studio-book-mode-switch" data-book-use-nonpackage>Book consult, barber, or salon instead (paid visit)</button>
         </div>
-        <p class="studio-glass-lead">What is this visit for?</p>
+        <p class="studio-glass-lead">What is this prepaid visit for?</p>
         <div class="studio-book-visit-types">
           ${types.map((t) => `
             <button type="button" class="studio-family-card studio-book-visit-tile${activeTypeId === t.id ? ' selected' : ''}"
@@ -1054,6 +1154,18 @@ window.RenvoaStudioUI = (function () {
         </div>
         <input type="hidden" id="apptService" value="${draft?.serviceId || draftSvcId || ''}">
         <p class="admin-fine">Selected: <strong id="apptSelectedLabel">${esc(draft?.serviceName || 'Choose a visit type')}</strong></p>`;
+    }
+
+    if (program && (program.visitsRemaining || 0) > 0 && usingNonPackage) {
+      const nonPkgHtml = renderNonPackageVisitPicker(ctx, draftSvcId, clientId, visitTypeId || 'consult');
+      return `
+        <div class="studio-book-visit-context">
+          <p class="studio-glass-hint studio-glass-hint-credit">
+            <strong>${esc(program.programName)}</strong> — ${program.visitsRemaining} prepaid visit${program.visitsRemaining !== 1 ? 's' : ''} still on account
+          </p>
+          <button type="button" class="link-cta studio-book-mode-switch" data-book-use-prepaid>Use a prepaid program visit instead</button>
+        </div>
+        ${nonPkgHtml}`;
     }
 
     return renderNonPackageVisitPicker(ctx, draftSvcId, clientId, visitTypeId);
@@ -1448,64 +1560,193 @@ window.RenvoaStudioUI = (function () {
       </div>`;
   }
 
-  function renderPostVisitBanner(ctx) {
-    if (!ctx.studioPostVisitApptId || ctx.studioPosMode === 'walkin') return '';
+  function getPostVisitFlowMeta(ctx) {
+    if (!ctx.studioPostVisitApptId || !ctx.studioPostVisitAwaitingCheckout || ctx.studioPosMode === 'walkin') return null;
     const appt = S().getAppointment(ctx.studioPostVisitApptId);
-    if (!appt) return '';
-    const firstVisit = S().isFirstTimeClient(appt.clientId, appt.clientPhone);
+    if (!appt) return null;
+    const cartItems = ctx.studioPosCart?.items || [];
     const followUp = appt.clientId
       ? S().getProgramFollowUpBooking(appt.clientId, {
         serviceId: appt.serviceId,
         extOptions: appt.extOptions,
         programName: appt.programName,
+        programId: appt.programId,
       })
       : null;
-    const hasPrepaid = !!(followUp?.packageFields);
-    const cartItems = ctx.studioPosCart?.items || [];
-    const cartHasPkg = cartItems.some((i) => i.packageVisit && (i.packageVisitApplied || i.price === 0));
-    const visitBalanceDue = cartItems
-      .filter((i) => i.postVisitServiceLine && (i.price || 0) > 0 && !i.packageVisit)
-      .reduce((sum, i) => sum + (i.price || 0) * (i.qty || 1), 0);
-    const showApplyPkg = hasPrepaid && !cartHasPkg && !appt.packageVisit;
-    const pkgBanner = appt.packageVisit ? renderPackageVisitBanner(appt) : '';
+    const inactivePackageAppt = appt.clientId && S().appointmentUsesInactiveProgram(appt, appt.clientId);
+    const inactiveFuture = appt.clientId
+      ? S().getFuturePackageAppointmentsForInactivePrograms(appt.clientId).appointments.length > 0
+      : false;
+    const followProgram = followUp?.packageFields?.programId && appt.clientId
+      ? (S().getClientProgramSummary(appt.clientId).programs || []).find((p) => p.id === followUp.packageFields.programId)
+      : null;
+    const followProgramInactive = followProgram && !S().isProgramEnrollmentActive(followProgram);
+    const hasPrepaid = !!(followUp?.packageFields) && !inactivePackageAppt && !inactiveFuture && !followProgramInactive;
+    const cartPkg = cartItems.find((i) => i.packageVisit && (i.packageVisitApplied || i.price === 0));
+    const cartHasPkg = !!cartPkg || (!!appt.packageVisit && !inactivePackageAppt);
+    const needsApply = hasPrepaid && !cartHasPkg;
+    const pendingRebook = ctx.studioPostVisitPendingRebookApptId
+      ? S().getAppointment(ctx.studioPostVisitPendingRebookApptId)
+      : null;
+    const followUpDone = !!pendingRebook || !!ctx.studioPostVisitFollowUpSkipped;
+    let step = 'complete_payment';
+    if (needsApply) step = 'apply_visit';
+    else if (!followUpDone) step = 'book_followup';
+
+    const program = appt.clientId && followUp?.packageFields?.programId
+      ? (S().getClientProgramSummary(appt.clientId).programs || []).find((p) => p.id === followUp.packageFields.programId)
+      : (appt.clientId ? (S().getClientProgramSummary(appt.clientId).programs || []).find((p) => p.visitsRemaining > 0) : null);
+
+    const visitsRemainingAfter = cartPkg?.visitsRemaining != null
+      ? Math.max(0, cartPkg.visitsRemaining - 1)
+      : (program?.visitsRemaining ?? null);
+
+    return {
+      appt,
+      step,
+      hasPrepaid,
+      cartHasPkg,
+      cartPkg,
+      followUp,
+      pendingRebook,
+      followUpDone,
+      program,
+      visitsRemainingAfter,
+      visitBalanceDue: cartItems
+        .filter((i) => i.postVisitServiceLine && (i.price || 0) > 0 && !i.packageVisit)
+        .reduce((sum, i) => sum + (i.price || 0) * (i.qty || 1), 0),
+      firstVisit: S().isFirstTimeClient(appt.clientId, appt.clientPhone),
+      inactivePackageAppt,
+      inactiveFuture,
+    };
+  }
+
+  function renderPostVisitStepper(step, hasPrepaid) {
+    const steps = hasPrepaid
+      ? [
+        { id: 'apply_visit', label: 'Apply visit' },
+        { id: 'book_followup', label: 'Book follow-up' },
+        { id: 'complete_payment', label: 'Complete payment' },
+      ]
+      : [
+        { id: 'book_followup', label: 'Book follow-up' },
+        { id: 'complete_payment', label: 'Complete payment' },
+      ];
+    const activeIdx = steps.findIndex((s) => s.id === step);
+    return `
+      <ol class="studio-post-visit-steps" aria-label="Visit checkout steps">
+        ${steps.map((s, i) => `
+          <li class="studio-post-visit-step${i === activeIdx ? ' is-active' : ''}${i < activeIdx ? ' is-done' : ''}">
+            <span class="studio-post-visit-step-num">${i + 1}</span>
+            <span class="studio-post-visit-step-label">${esc(s.label)}</span>
+          </li>`).join('')}
+      </ol>`;
+  }
+
+  function renderPostVisitRegisterStatus(ctx, dueTotal) {
+    const meta = getPostVisitFlowMeta(ctx);
+    if (!meta) return '';
+    const { appt, step, cartHasPkg, cartPkg, pendingRebook, followUpDone, program, visitsRemainingAfter } = meta;
+    const statusMeta = S().APPT_STATUS[appt.status] || {};
+    const pkgLabel = cartHasPkg
+      ? (cartPkg
+        ? `Visit ${cartPkg.visitNumber}/${cartPkg.visitsIncluded} applied${cartPkg.programName ? ` · ${cartPkg.programName}` : ''}`
+        : (appt.packageVisit ? S().getPackageVisitLabel(appt) : 'Applied'))
+      : (meta.hasPrepaid ? 'Not applied — tap Apply visit above' : 'No prepaid visit on file');
+    const followLabel = pendingRebook
+      ? `${fmtDate(pendingRebook.date)} · ${fmtTime12(pendingRebook.startTime)}${pendingRebook.packageVisit ? ` · ${S().getPackageVisitLabel(pendingRebook)}` : ''}`
+      : (ctx.studioPostVisitFollowUpSkipped ? 'Skipped' : (step === 'book_followup' ? 'Not scheduled yet' : 'Not scheduled'));
+    const remainingLabel = visitsRemainingAfter != null
+      ? `${visitsRemainingAfter} visit${visitsRemainingAfter !== 1 ? 's' : ''} remaining`
+      : (program?.visitsRemaining != null ? `${program.visitsRemaining} remaining` : '—');
+
+    return `
+      <div class="studio-pos-visit-status">
+        <p class="studio-pos-visit-status-title">Visit checkout</p>
+        <dl class="studio-pos-visit-status-grid">
+          <div class="studio-pos-visit-status-row">
+            <dt>Appointment</dt>
+            <dd><span class="studio-pos-visit-pill" style="--pill-color:${statusMeta.color || '#2563EB'}">${esc(statusMeta.label || appt.status)}</span> · ${esc(appt.serviceName)}</dd>
+          </div>
+          <div class="studio-pos-visit-status-row${cartHasPkg ? ' is-good' : (meta.hasPrepaid ? ' is-warn' : '')}">
+            <dt>Package visit</dt>
+            <dd>${esc(pkgLabel)}${cartHasPkg && remainingLabel !== '—' ? ` <em>(${esc(remainingLabel)})</em>` : ''}</dd>
+          </div>
+          <div class="studio-pos-visit-status-row${pendingRebook ? ' is-good' : ''}">
+            <dt>Follow-up</dt>
+            <dd>${esc(followLabel)}</dd>
+          </div>
+          <div class="studio-pos-visit-status-row studio-pos-visit-status-due">
+            <dt>Due today</dt>
+            <dd><strong>${S().formatPrice(dueTotal)}</strong></dd>
+          </div>
+        </dl>
+      </div>`;
+  }
+
+  function renderPostVisitBanner(ctx) {
+    const meta = getPostVisitFlowMeta(ctx);
+    if (!meta) return '';
+    const {
+      appt, step, hasPrepaid, followUp, pendingRebook, visitBalanceDue, firstVisit,
+    } = meta;
     const warrantySummary = appt.clientId ? S().getClientWarrantySummary(appt.clientId) : null;
     const lapsedWarranty = (warrantySummary?.lapsed || [])[0];
     const warrantyWarn = lapsedWarranty
       ? `<p class="studio-post-visit-warranty-warn"><strong>Warranty lapsed</strong> — ${esc(lapsedWarranty.programName)} needs a ${S().formatPrice(lapsedWarranty.warranty.reinstatementFee)} reinstatement at the register.</p>`
       : '';
 
-    const pendingRebook = ctx.studioPostVisitPendingRebookApptId
-      ? S().getAppointment(ctx.studioPostVisitPendingRebookApptId)
-      : null;
-    const pendingRebookHint = pendingRebook
-      ? `<p class="studio-post-visit-hint studio-post-visit-hint-success">Follow-up booked for ${fmtDate(pendingRebook.date)} at ${esc(fmtTime12(pendingRebook.startTime))}${pendingRebook.packageVisit ? ` · ${esc(S().getPackageVisitLabel(pendingRebook))}` : ''} — apply prepaid visit below and complete sale.</p>`
+    const inactiveWarn = meta.inactivePackageAppt || meta.inactiveFuture
+      ? '<p class="studio-post-visit-inactive-warn"><strong>Package inactive or refunded</strong> — prepaid visit credit cannot be used. Cancel future prepaid appointments or charge full retail price.</p>'
       : '';
 
-    const title = firstVisit ? 'First visit — register' : 'Visit checkout';
-    const lead = pendingRebook
-      ? 'Follow-up is on the calendar. Apply a prepaid visit for today\'s service, then complete the sale.'
-      : (firstVisit
-        ? 'Present package options here first, ring up today\'s service, then schedule their next visit.'
-        : 'Ring up today\'s visit at the register. Apply a prepaid visit if they have one — you can schedule follow-up before or after checkout.');
+    const stepLead = {
+      apply_visit: hasPrepaid
+        ? `This client has a prepaid visit on file. Apply it now so today&apos;s service is covered before booking follow-up and payment.`
+        : (meta.inactivePackageAppt || meta.inactiveFuture
+          ? 'Prepaid visit credit is blocked until future appointments on the inactive package are canceled.'
+          : ''),
+      book_followup: firstVisit
+        ? 'Present package options if needed, then book their next visit before completing payment.'
+        : 'Book their follow-up visit on the calendar, or skip if they will call to schedule.',
+      complete_payment: pendingRebook
+        ? 'Follow-up is booked and the visit is applied. Complete payment to finish checkout.'
+        : 'Ready to complete payment and close out this visit.',
+    };
+
+    let primaryAction = '';
+    let secondaryActions = '';
+    if (step === 'apply_visit') {
+      primaryAction = '<button type="button" class="studio-glass-btn studio-glass-btn-primary studio-post-visit-cta" id="posApplyPackageVisitBtn">Apply visit</button>';
+      if (visitBalanceDue > 0) {
+        secondaryActions = `<p class="studio-post-visit-balance">Retail balance: <strong>${S().formatPrice(visitBalanceDue)}</strong> — will drop to <strong>${S().formatPrice(0)}</strong> when visit is applied.</p>`;
+      }
+      if (followUp?.displayName) {
+        secondaryActions += `<p class="studio-post-visit-hint">${esc(followUp.displayName)} on file</p>`;
+      }
+    } else if (step === 'book_followup') {
+      primaryAction = '<button type="button" class="studio-glass-btn studio-glass-btn-primary studio-post-visit-cta" id="posScheduleFollowUpBtn">Book follow-up</button>';
+      secondaryActions = `
+        <button type="button" class="studio-glass-btn studio-glass-btn-ghost" id="posSkipFollowUpBtn">Skip follow-up</button>
+        ${hasPrepaid ? '<button type="button" class="studio-glass-btn studio-glass-btn-secondary" id="posUseVisitTodayBtn">Same-day follow-up</button>' : ''}`;
+    } else {
+      primaryAction = '<span class="studio-post-visit-ready">Ready for payment — use <strong>Complete payment</strong> in the register.</span>';
+    }
 
     return `
-      <div class="studio-post-visit-banner">
+      <div class="studio-post-visit-banner studio-post-visit-banner--${step}">
         <div class="studio-post-visit-banner-head">
           <span class="studio-post-visit-eyebrow">End of visit</span>
-          <strong>${title}</strong>
+          <strong>${firstVisit ? 'First visit checkout' : 'Visit checkout'}</strong>
           <p>${esc(appt.clientName)} · ${esc(appt.serviceName)}</p>
-          <p class="studio-post-visit-lead">${lead}</p>
-          ${hasPrepaid && followUp && !pendingRebook ? `<p class="studio-post-visit-hint">${esc(followUp.displayName)} on file</p>` : ''}
-          ${visitBalanceDue > 0 ? `<p class="studio-post-visit-balance">Balance due: <strong>${S().formatPrice(visitBalanceDue)}</strong> — click Apply package visit to use a prepaid visit and zero the total.</p>` : ''}
-          ${pendingRebookHint}
-          ${pkgBanner}
+          ${renderPostVisitStepper(step, hasPrepaid)}
+          <p class="studio-post-visit-lead">${stepLead[step] || ''}</p>
+          ${inactiveWarn}
           ${warrantyWarn}
         </div>
         <div class="studio-post-visit-actions">
-          ${showApplyPkg ? '<button type="button" class="studio-glass-btn studio-glass-btn-secondary" id="posApplyPackageVisitBtn">Apply package visit</button>' : ''}
-          ${hasPrepaid && !pendingRebook ? '<button type="button" class="studio-glass-btn studio-glass-btn-secondary" id="posUseVisitTodayBtn">Use visit today</button>' : ''}
-          ${!pendingRebook ? '<button type="button" class="studio-glass-btn studio-glass-btn-secondary" id="posScheduleFollowUpBtn">Schedule follow-up</button>' : ''}
-          <button type="button" class="studio-glass-btn studio-glass-btn-ghost" id="posFinishVisitBtn">Done — no follow-up</button>
+          ${primaryAction}
+          ${secondaryActions}
         </div>
       </div>`;
   }
@@ -1834,8 +2075,9 @@ window.RenvoaStudioUI = (function () {
           <button type="button" class="studio-glass-wizard-close" data-appt-modal-close aria-label="Close">×</button>
           <p class="studio-glass-wizard-eyebrow">Appointment</p>
           <h2 id="apptModalTitle" class="studio-glass-wizard-title">${esc(selected.clientName)}${firstVisitBadge(selected.clientId, selected.clientPhone)}${intakeSkippedBadge(selected)}${allergyAlertBadge(selected)}</h2>
-          <p class="studio-glass-wizard-sub">${esc(selected.intendedService || selected.serviceName)}${selected.source === 'website' ? ' · Web booking' : ''}</p>
+          <p class="studio-glass-wizard-sub">${esc(selected.intendedService || selected.serviceName)}${selected.source === 'website' ? ' · Web booking' : selected.source === 'client_portal' ? ' · Client portal booking' : ''}</p>
           <div class="studio-glass-wizard-body">
+            ${renderAppointmentBookingPrepPanel(selected)}
             ${renderVisitFlowStepper(selected)}
             ${renderPackageVisitBanner(selected)}
             <div class="studio-glass-hero-slot studio-glass-hero-slot-compact" style="--status-color:${statusMeta.color || '#2563EB'}">
@@ -1927,8 +2169,6 @@ window.RenvoaStudioUI = (function () {
               </label>
               <button type="button" class="studio-glass-btn studio-glass-btn-secondary studio-glass-btn-inline" id="updateApptStatusBtn" data-appt="${selected.id}">Update</button>
             </div>
-            ${selected.clientPreferences?.beverageLabel ? `<div class="studio-appt-modal-notes studio-appt-arrival-pref"><span>21+ beverage</span><p>${esc(selected.clientPreferences.beverageLabel)} — prep for arrival</p></div>` : ''}
-            ${(selected.bookingInspoPhotos || selected.clientPreferences?.inspoPhotos || []).length ? `<div class="studio-appt-modal-notes"><span>Inspo photos</span><p>${(selected.bookingInspoPhotos || selected.clientPreferences?.inspoPhotos || []).length} on file</p></div>` : ''}
             ${selected.notes ? `<div class="studio-appt-modal-notes"><span>Notes</span><p>${esc(selected.notes)}</p></div>` : ''}
             <div class="studio-appt-modal-actions">
               ${apptMovable(selected.status) ? `<button type="button" class="studio-glass-btn studio-glass-btn-primary" id="apptMoveModeBtn" data-appt="${selected.id}">Move on calendar</button>` : ''}
@@ -2025,9 +2265,21 @@ window.RenvoaStudioUI = (function () {
     const schedule = stats.todaySchedule || [];
     const attention = stats.needsNextVisit || [];
     const recentTxs = stats.recentTransactions || [];
+    const onlineBookings = stats.pendingOnlineBookings || [];
     return `
       ${pageHead('Ops Dashboard', META().tagline || 'Private hair restoration studio — internal ops')}
       ${subnav('dashboard', stats.newInquiries, ctx.clinicSideNav)}
+      ${onlineBookings.length ? `
+        <section class="admin-panel studio-pos-panel studio-dash-online-bookings">
+          <div class="admin-panel-head">
+            <h2>New online bookings</h2>
+            <span class="admin-fine">${onlineBookings.length} need pre-visit contact</span>
+          </div>
+          <p class="studio-dash-online-lead">Clients booked through the portal or website — review inspiration photos and preferences, then reach out before their visit if needed.</p>
+          <ul class="studio-pos-timeline studio-online-booking-list">
+            ${onlineBookings.map((appt) => renderDashboardOnlineBookingItem(appt)).join('')}
+          </ul>
+        </section>` : ''}
       <div class="studio-pos-kpi-grid studio-pos-kpi-grid-ops">
         <div class="studio-pos-kpi"><span>Today</span><strong>${stats.todayAppointments}</strong><small>on calendar</small></div>
         <div class="studio-pos-kpi accent"><span>Revenue (7d)</span><strong>${S().formatPrice(stats.weekRevenue)}</strong><small>register</small></div>
@@ -2037,6 +2289,7 @@ window.RenvoaStudioUI = (function () {
         <div class="studio-pos-kpi warn"><span>Late now</span><strong>${(stats.lateToday || []).length}</strong><small>awaiting arrival</small></div>
         <div class="studio-pos-kpi"><span>Need booking</span><strong>${attention.length}</strong><small>follow-up</small></div>
         <div class="studio-pos-kpi"><span>Card countdown</span><strong>${stats.birthdayCountWeek || 0}</strong><small>next 7 days</small></div>
+        <div class="studio-pos-kpi${onlineBookings.length ? ' warn' : ''}"><span>Online bookings</span><strong>${onlineBookings.length}</strong><small>to review</small></div>
         <div class="studio-pos-kpi warn"><span>Inquiries</span><strong>${stats.newInquiries}</strong><small>new</small></div>
         <div class="studio-pos-kpi"><span>No-shows</span><strong>${stats.noShowsToday || 0}</strong><small>today</small></div>
         <div class="studio-pos-kpi"><span>Revenue (30d)</span><strong>${S().formatPrice(stats.monthRevenue)}</strong><small>register</small></div>
@@ -2052,7 +2305,7 @@ window.RenvoaStudioUI = (function () {
               <li class="studio-timeline-click studio-timeline-status-${a.status}${a.isLate ? ' studio-timeline-late' : ''}" data-studio-appt-dash="${a.id}">
                 <span class="studio-pos-time">${esc(fmtTime12(a.startTime))}</span>
                 <div>
-                  <strong>${esc(a.clientName)}${firstVisitBadge(a.clientId, a.clientPhone)}${packageVisitBadge(a)}</strong>
+                  <strong>${esc(a.clientName)}${firstVisitBadge(a.clientId, a.clientPhone)}${packageVisitBadge(a)}${onlineBookingBadge(a)}${bookingPrepBadge(a)}</strong>
                   <span>${esc(a.serviceName)} · Chair ${a.column}${a.isLate ? ` · <em class="studio-late-flag">${Math.floor(a.lateMinutes || 0)}m late</em>` : ''}</span>
                 </div>
                 <span class="admin-status-pill" style="--pill-color:${S().APPT_STATUS[a.status]?.color || '#2563EB'}">${esc(S().APPT_STATUS[a.status]?.label || a.status)}</span>
@@ -2168,6 +2421,42 @@ window.RenvoaStudioUI = (function () {
           <div class="studio-glass-wizard-footer">
             <button type="button" class="studio-glass-btn studio-glass-btn-secondary" data-pos-auth-close>Cancel</button>
             <button type="button" class="studio-glass-btn studio-glass-btn-primary" id="posAuthConfirmBtn">Confirm</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderInactiveProgramModal(ctx) {
+    if (!ctx.studioInactiveProgramModalOpen) return '';
+    const data = ctx.studioInactiveProgramModalData || {};
+    const details = data.details || [];
+    const client = ctx.studioInactiveProgramModalClientId
+      ? S().getClient(ctx.studioInactiveProgramModalClientId)
+      : null;
+    return `
+      <div class="studio-glass-wizard studio-visit-modal" id="studioInactiveProgramModal">
+        <button type="button" class="studio-glass-wizard-backdrop studio-glass-backdrop" data-inactive-program-close aria-label="Close"></button>
+        <div class="studio-glass-wizard-panel studio-glass-panel" role="dialog" aria-modal="true">
+          <button type="button" class="studio-glass-wizard-close" data-inactive-program-close aria-label="Close">×</button>
+          <p class="studio-glass-wizard-eyebrow">Package inactive</p>
+          <h2 class="studio-glass-wizard-title">Cancel future prepaid visits?</h2>
+          <p class="studio-glass-wizard-sub">
+            <strong>${esc(client?.name || 'This client')}</strong> has a refunded or voided package, but
+            <strong>${details.length}</strong> future appointment${details.length !== 1 ? 's' : ''} still booked as prepaid visits.
+            They cannot remain free — cancel them or charge full price at the register.
+          </p>
+          <div class="studio-glass-wizard-body">
+            <ul class="studio-inactive-program-appt-list">
+              ${details.map(({ appointment: a, program: p }) => `
+                <li>
+                  <strong>${fmtDate(a.date)} · ${esc(fmtTime12(a.startTime))}</strong>
+                  <span>${esc(a.serviceName || 'Appointment')} · ${esc(p.programName || '')} · ${esc(p.enrollmentLabel || 'Inactive')}</span>
+                </li>`).join('')}
+            </ul>
+          </div>
+          <div class="studio-glass-wizard-footer">
+            <button type="button" class="studio-glass-btn studio-glass-btn-secondary" data-inactive-program-close>Keep appointments</button>
+            <button type="button" class="studio-glass-btn studio-glass-btn-primary" id="cancelInactiveProgramApptsBtn" data-client="${esc(ctx.studioInactiveProgramModalClientId || '')}">Cancel all prepaid appointments</button>
           </div>
         </div>
       </div>`;
@@ -2307,10 +2596,11 @@ window.RenvoaStudioUI = (function () {
         <section class="studio-pos-catalog">
           <div class="${catalogGridClass}">${catalogHtml || `<p class="admin-empty">${search ? 'No items match your search.' : 'No items in this category.'}</p>`}</div>
         </section>
-        <aside class="studio-pos-register studio-pos-panel${isWalkIn ? ' studio-pos-register-walkin' : ''}">
+        <aside class="studio-pos-register studio-pos-panel${isWalkIn ? ' studio-pos-register-walkin' : ''}${ctx.studioPostVisitApptId && !isWalkIn ? ' studio-pos-register-postvisit' : ''}">
           <h2>${isWalkIn ? 'Walk-in register' : 'Register'}</h2>
+          ${!isWalkIn && ctx.studioPostVisitApptId ? renderPostVisitRegisterStatus(ctx, dueTotal) : ''}
           ${clientField}
-          ${!isWalkIn ? renderPosProgramVisitPanel(cart.clientId || posClient?.id, cart.items) : ''}
+          ${!isWalkIn && !ctx.studioPostVisitApptId ? renderPosProgramVisitPanel(cart.clientId || posClient?.id, cart.items) : ''}
           ${!isWalkIn ? renderPosWarrantyPanel(cart.clientId || posClient?.id, cart.items) : ''}
           <div class="studio-pos-cart">
             ${cart.items.length ? cart.items.map((item, idx) => `
@@ -2357,7 +2647,21 @@ window.RenvoaStudioUI = (function () {
               ${isWalkIn ? '' : '<option value="financing">Financing</option>'}
             </select>
           </label>
-          <button type="button" class="btn-primary btn-full" id="posCheckoutBtn" ${!cart.items.length ? 'disabled' : ''}>Complete sale</button>
+          ${(() => {
+            const inPostVisit = !isWalkIn && !!ctx.studioPostVisitApptId && !!ctx.studioPostVisitAwaitingCheckout;
+            const postMeta = inPostVisit ? getPostVisitFlowMeta(ctx) : null;
+            const onPaymentStep = !inPostVisit || postMeta?.step === 'complete_payment';
+            const checkoutLabel = inPostVisit ? 'Complete payment' : 'Complete sale';
+            const checkoutHint = inPostVisit && !onPaymentStep
+              ? `<p class="studio-pos-checkout-hint">${postMeta?.step === 'apply_visit' ? 'Apply the prepaid visit above before completing payment.' : 'Book follow-up or tap Skip follow-up above before completing payment.'}</p>`
+              : (inPostVisit && !postMeta
+                ? '<p class="studio-pos-checkout-hint">Finish the visit checkout steps above before completing payment.</p>'
+                : '');
+            const showCheckout = !inPostVisit || onPaymentStep;
+            return `${checkoutHint}${showCheckout
+              ? `<button type="button" class="btn-primary btn-full" id="posCheckoutBtn" ${!cart.items.length ? 'disabled' : ''}>${checkoutLabel}</button>`
+              : '<button type="button" class="btn-primary btn-full" id="posCheckoutBtn" disabled>Complete payment</button>'}`;
+          })()}
           <button type="button" class="btn-secondary btn-full" id="posPresentBtn" ${!cart.items.length ? 'disabled' : ''}>Present pricing →</button>
           ${!isWalkIn && S().getFinanceUrl() ? `<button type="button" class="btn-secondary btn-full studio-finance-link" data-open-finance>Open financing application</button>` : ''}
         </aside>
@@ -2754,13 +3058,14 @@ window.RenvoaStudioUI = (function () {
       : defaultMerge;
     const mergePreview = selectedMerge ? S().previewClientMerge(selected.id, selectedMerge) : null;
     const programs = summary?.programs || [];
-    const refundableTxs = S().getClientTransactions(selected.id)
-      .filter((t) => S().getRefundableAmount(t) > 0)
-      .slice(0, 12);
+    const refundableTxs = (S().getClientRefundableTransactions
+      ? S().getClientRefundableTransactions(selected.id)
+      : S().getClientTransactions(selected.id).filter((t) => S().getRefundableAmount(t) > 0)
+    ).slice(0, 12);
 
     return `
       <section class="studio-client-manage">
-        <p class="studio-client-pin-notice">All account adjustments require admin PIN <strong>1214</strong>.</p>
+        <p class="studio-client-pin-notice">All account adjustments require the admin PIN.</p>
 
         <article class="studio-client-manage-card">
           <h3>Merge profiles</h3>
@@ -2910,7 +3215,7 @@ window.RenvoaStudioUI = (function () {
                         <small>+1 counts an extra used visit; −1 restores one.</small>
                       </label>
                       <label class="form-field studio-check-field">
-                        <input type="checkbox" name="active" ${ov?.active === false ? '' : 'checked'}>
+                        <input type="checkbox" name="active" ${ov?.active === false || p.voided || p.refunded || p.fullyRefunded ? '' : 'checked'}>
                         <span>Program active (uncheck to void)</span>
                       </label>
                     </div>
@@ -2926,11 +3231,10 @@ window.RenvoaStudioUI = (function () {
   }
 
   function renderClients(ctx) {
-    const clients = S().searchClients(ctx.studioClientSearch);
-    const selected = ctx.selectedStudioClientId ? S().getClient(ctx.selectedStudioClientId) : clients[0];
-    const listClients = (selected && !clients.some((c) => c.id === selected.id))
-      ? [selected, ...clients]
-      : clients;
+    const searchQuery = String(ctx.studioClientSearch || '').trim();
+    const clients = S().searchClients(searchQuery);
+    const selected = clients.find((c) => c.id === ctx.selectedStudioClientId) || clients[0] || null;
+    const listClients = clients;
     const adding = ctx.studioClientAdding;
     const tab = ctx.studioClientTab || 'overview';
     const visitRecords = selected ? S().getClientVisitRecords(selected.id) : [];
@@ -2971,13 +3275,15 @@ window.RenvoaStudioUI = (function () {
                 ${S().getClientCreditBalance(c.id) > 0 ? `<p class="studio-client-card-credit">${S().formatPrice(S().getClientCreditBalance(c.id))} credit</p>` : ''}
                 <p>${esc(c.phone || c.email || '—')}</p>
                 <div class="admin-order-card-bottom"><span>${esc(c.gender || '')}</span><span>${fmtDate((c.updatedAt || c.createdAt || '').slice(0, 10))}</span></div>
-              </button>`).join('') || '<p class="admin-empty">No clients yet — book an appointment or complete a POS sale.</p>'}
+              </button>`).join('') || (searchQuery
+                ? '<p class="admin-empty">No clients match your search.</p>'
+                : '<p class="admin-empty">No clients yet — book an appointment or complete a POS sale.</p>')}
           </div>
         </section>
         <section class="admin-panel admin-panel-detail studio-client-detail"${selected && !adding ? ` data-client-id="${selected.id}"` : ''}>
           ${adding ? `
             <h2>New client</h2>
-            <p class="studio-client-pin-notice">Creating a client requires admin PIN <strong>1214</strong>.</p>
+            <p class="studio-client-pin-notice">Creating a client requires the admin PIN.</p>
             <form id="studioClientNewForm" class="admin-goals-form">
               <label class="form-field"><span>Name *</span><input type="text" id="studioClientNewName" required></label>
               <label class="form-field"><span>Email</span><input type="email" id="studioClientNewEmail"></label>
@@ -3017,7 +3323,7 @@ window.RenvoaStudioUI = (function () {
               ${renderClientProgramSection(summary)}
               <details class="studio-client-collapsible" open>
                 <summary>Contact &amp; notes <small>(PIN required to save)</small></summary>
-                <p class="studio-client-pin-notice">Profile edits require admin PIN <strong>1214</strong>.</p>
+                <p class="studio-client-pin-notice">Profile edits require the admin PIN.</p>
                 <form id="studioClientForm" class="admin-goals-form">
                   <label class="form-field"><span>Name</span><input type="text" id="studioClientNameEdit" value="${esc(selected.name)}"></label>
                   <label class="form-field"><span>Email</span><input type="email" id="studioClientEmailEdit" value="${esc(selected.email)}"></label>
@@ -3330,6 +3636,9 @@ window.RenvoaStudioUI = (function () {
       studioPhotoPromptKind: null,
       studioPhotoPromptApptId: null,
       studioPhotoPromptPending: null,
+      studioInactiveProgramModalOpen: false,
+      studioInactiveProgramModalClientId: null,
+      studioInactiveProgramModalData: null,
       ...ctx,
     };
     const views = {
@@ -3344,8 +3653,8 @@ window.RenvoaStudioUI = (function () {
       settings: renderSettings,
     };
     const body = (views[subView] || renderDashboard)(fullCtx);
-    return `<div class="studio-pos-root">${body}${renderPosAuthModal(fullCtx)}${renderPhotoPromptModal(fullCtx)}${renderFinanceOverlay(fullCtx)}${renderIntakeWizardModal(fullCtx)}${renderAllergyModal(fullCtx)}${renderProviderWizardModal(fullCtx)}</div>`;
+    return `<div class="studio-pos-root">${body}${renderPosAuthModal(fullCtx)}${renderInactiveProgramModal(fullCtx)}${renderPhotoPromptModal(fullCtx)}${renderFinanceOverlay(fullCtx)}${renderIntakeWizardModal(fullCtx)}${renderAllergyModal(fullCtx)}${renderProviderWizardModal(fullCtx)}</div>`;
   }
 
-  return { render, esc };
+  return { render, esc, getPostVisitFlowMeta };
 })();
