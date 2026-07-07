@@ -378,12 +378,14 @@
     if (modalScroll) modalScroll.scrollTop = 0;
     window.RenvoaTrack?.('view_item', { item_id: id });
     productModal.classList.add('active');
+    productModal.setAttribute('aria-hidden', 'false');
     modalOverlay.classList.add('active');
     document.body.style.overflow = 'hidden';
   }
 
   function closeModal() {
     productModal.classList.remove('active');
+    productModal.setAttribute('aria-hidden', 'true');
     modalOverlay.classList.remove('active');
     document.body.style.overflow = '';
   }

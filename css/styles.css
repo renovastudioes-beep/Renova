@@ -1392,6 +1392,7 @@ img { max-width: 100%; display: block; }
 }
 
 .product-modal.active {
+  display: flex;
   opacity: 1;
   visibility: visible;
   transform: translate(-50%, -50%) scale(1);

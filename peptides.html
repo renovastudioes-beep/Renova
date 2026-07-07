@@ -9,7 +9,7 @@
   <meta property="og:title" content="ONYX Peptides — Research Peptides">
   <meta property="og:description" content="HPLC verified research peptides. Cold-chain shipping. COA on every order.">
   <meta property="og:type" content="website">
-  <link rel="stylesheet" href="css/styles.css?v=63">
+  <link rel="stylesheet" href="css/styles.css?v=64">
   <link rel="stylesheet" href="css/mobile-device.css?v=1">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"Store","name":"ONYX Peptides","description":"Research-grade peptides for laboratory use","url":"https://onyx.com"}
@@ -558,12 +558,12 @@
 
   <!-- Product Detail Modal -->
   <div class="modal-overlay" id="modalOverlay"></div>
-  <dialog class="product-modal" id="productModal">
+  <div class="product-modal" id="productModal" role="dialog" aria-modal="true" aria-hidden="true">
     <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
     <div class="modal-scroll" id="modalScroll">
       <div class="modal-content" id="modalContent"></div>
     </div>
-  </dialog>
+  </div>
 
   <!-- Toast -->
   <div class="toast" id="toast"></div>
@@ -574,6 +574,6 @@
   <script src="js/product-details.js"></script>
   <script src="js/cart.js"></script>
   <script src="js/analytics.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/main.js?v=2"></script>
 </body>
 </html>

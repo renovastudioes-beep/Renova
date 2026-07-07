@@ -314,7 +314,7 @@
   function resolveSideFromSwipe(dx, dy) {
     if (isMobile()) {
       if (Math.abs(dy) < Math.abs(dx) * 0.85) return null;
-      return dy < 0 ? 'peptides' : 'hair';
+      return dy < 0 ? 'hair' : 'peptides';
     }
     if (Math.abs(dx) < Math.abs(dy) * 0.85) return null;
     return dx > 0 ? 'peptides' : 'hair';
