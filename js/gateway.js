@@ -19,8 +19,9 @@
     peptides: 'peptides.html',
     hair: 'studios.html',
   };
-  const SWIPE_DISTANCE = 52;
-  const SWIPE_VELOCITY = 0.38;
+  const SWIPE_DISTANCE = 40;
+  const SWIPE_VELOCITY = 0.28;
+  const MOBILE_SWIPE_COMMIT = 28;
   const OPEN_FOCUS = 0.34;
 
   const SPLIT_CENTER = 0.5;
@@ -291,6 +292,11 @@
     return isMobile() ? clientY / window.innerHeight : clientX / window.innerWidth;
   }
 
+  function ratioFromSwipeDelta(startRatio, dy) {
+    const shift = (-dy / window.innerHeight) * 1.35;
+    return Math.max(0, Math.min(1, startRatio + shift));
+  }
+
   function dominantSideFromFocus() {
     const { pFocus, hFocus } = focusFromSplit(split);
     if (pFocus >= OPEN_FOCUS && pFocus >= hFocus) return 'peptides';
@@ -313,7 +319,7 @@
 
   function resolveSideFromSwipe(dx, dy) {
     if (isMobile()) {
-      if (Math.abs(dy) < Math.abs(dx) * 0.85) return null;
+      if (Math.abs(dy) < Math.abs(dx) * 0.65) return null;
       return dy < 0 ? 'hair' : 'peptides';
     }
     if (Math.abs(dx) < Math.abs(dy) * 0.85) return null;
@@ -326,10 +332,22 @@
     return Math.abs(axis) >= SWIPE_DISTANCE || velocity >= SWIPE_VELOCITY;
   }
 
+  function shouldCommitMobileSwipe(dx, dy, durationMs) {
+    if (!isMobile()) return false;
+    if (Math.abs(dy) < Math.abs(dx) * 0.65) return false;
+    return Math.abs(dy) >= MOBILE_SWIPE_COMMIT || shouldOpenFromSwipe(dx, dy, durationMs);
+  }
+
+  let suppressPanelClick = false;
+
   [peptidesPanel, hairPanel].forEach((panel) => {
     if (!panel) return;
     panel.addEventListener('click', (e) => {
-      if (!isTouchUI() || canHover) return;
+      if (!isTouchUI()) return;
+      if (suppressPanelClick) {
+        e.preventDefault();
+        return;
+      }
       const side = panel.dataset.side;
       const { pFocus, hFocus } = focusFromSplit(split);
       const focused = side === 'peptides' ? pFocus : hFocus;
@@ -348,25 +366,45 @@
 
   if (isTouchUI()) {
     gateway.classList.add('is-touch-ui');
+    document.body.classList.add('gateway-touch');
     let touchStart = null;
     let touchDragging = false;
+    const touchSurface = document.body;
 
-    gateway.addEventListener('touchstart', (e) => {
+    function clearTouchState() {
+      touchStart = null;
+      touchDragging = false;
+      gateway.classList.remove('is-swiping');
+    }
+
+    function finishTouchNavigation(side, e) {
+      if (!side || navigating) return false;
+      e?.preventDefault();
+      suppressPanelClick = true;
+      window.setTimeout(() => {
+        suppressPanelClick = false;
+      }, 700);
+      navigateToSide(side);
+      return true;
+    }
+
+    touchSurface.addEventListener('touchstart', (e) => {
       if (navigating || e.touches.length !== 1) return;
       const t = e.touches[0];
+      const ratio = ratioFromPoint(t.clientX, t.clientY);
       touchStart = {
         x: t.clientX,
         y: t.clientY,
         at: Date.now(),
+        ratio,
       };
       touchDragging = false;
       isInside = true;
-      const ratio = ratioFromPoint(t.clientX, t.clientY);
       pointerRatio = ratio;
       setPointerRatio(ratio);
     }, { passive: true });
 
-    gateway.addEventListener('touchmove', (e) => {
+    touchSurface.addEventListener('touchmove', (e) => {
       if (!touchStart || navigating || e.touches.length !== 1) return;
       const t = e.touches[0];
       const dx = t.clientX - touchStart.x;
@@ -377,11 +415,13 @@
       }
       if (!touchDragging) return;
       e.preventDefault();
-      const ratio = ratioFromPoint(t.clientX, t.clientY);
+      const ratio = isMobile()
+        ? ratioFromSwipeDelta(touchStart.ratio, dy)
+        : ratioFromPoint(t.clientX, t.clientY);
       nudgePointerRatio(ratio);
     }, { passive: false });
 
-    gateway.addEventListener('touchend', (e) => {
+    touchSurface.addEventListener('touchend', (e) => {
       if (!touchStart || navigating) return;
       const t = e.changedTouches[0];
       const dx = t.clientX - touchStart.x;
@@ -391,17 +431,27 @@
 
       if (touchDragging) {
         let side = resolveSideFromSwipe(dx, dy);
-        const strongSwipe = shouldOpenFromSwipe(dx, dy, durationMs);
-        if (!side || !strongSwipe) {
-          side = dominantSideFromFocus();
-          if (!side || !strongSwipe) {
+        const focusSide = dominantSideFromFocus();
+
+        if (isMobile()) {
+          if (side && shouldCommitMobileSwipe(dx, dy, durationMs)) {
+            finishTouchNavigation(side, e);
+          } else if (focusSide) {
+            finishTouchNavigation(focusSide, e);
+          } else {
             resetToCenter();
-            touchStart = null;
-            touchDragging = false;
-            return;
+          }
+        } else {
+          const strongSwipe = shouldOpenFromSwipe(dx, dy, durationMs);
+          if (!side || !strongSwipe) {
+            side = focusSide;
+          }
+          if (side && strongSwipe) {
+            finishTouchNavigation(side, e);
+          } else {
+            resetToCenter();
           }
         }
-        navigateToSide(side);
       } else {
         const ratio = ratioFromPoint(t.clientX, t.clientY);
         setPointerRatio(ratio);
@@ -410,14 +460,11 @@
         else resetToCenter();
       }
 
-      touchStart = null;
-      touchDragging = false;
-    }, { passive: true });
+      clearTouchState();
+    }, { passive: false });
 
-    gateway.addEventListener('touchcancel', () => {
-      touchStart = null;
-      touchDragging = false;
-      gateway.classList.remove('is-swiping');
+    touchSurface.addEventListener('touchcancel', () => {
+      clearTouchState();
       resetToCenter();
     }, { passive: true });
   }

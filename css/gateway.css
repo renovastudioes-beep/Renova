@@ -95,7 +95,8 @@ ul { list-style: none; }
   touch-action: pan-x pan-y;
 }
 
-.renova-gateway.is-touch-ui {
+.renova-gateway.is-touch-ui,
+body.gateway-touch {
   touch-action: none;
 }
 
