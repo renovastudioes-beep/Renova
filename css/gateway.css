@@ -98,6 +98,13 @@ ul { list-style: none; }
 .renova-gateway.is-touch-ui,
 body.gateway-touch {
   touch-action: none;
+  overscroll-behavior: none;
+}
+
+body.gateway-touch .gateway-panel {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .renova-gateway.is-swiping,
