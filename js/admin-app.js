@@ -62,6 +62,7 @@
   let studioPosSearch = '';
   let studioClientSearch = '';
   let studioClientAdding = false;
+  let studioClientMobilePane = 'list';
   let studioFlash = '';
   let studioFlashType = 'info';
   let studioApptServiceId = null;
@@ -195,6 +196,7 @@
       if (client) {
         studioClientAdding = false;
         selectedStudioClientId = client.id;
+        if (isMobileAdminViewport()) studioClientMobilePane = 'detail';
         studioNotify(`${client.name} added.`, 'success');
       }
     } else if (studioPosAuthAction === 'client_merge') {
@@ -438,10 +440,18 @@
   }
 
   /** Clinic ops live under activeView `studios`; only Finance P&L uses `finance`. */
+  function isMobileAdminViewport() {
+    return window.matchMedia('(max-width: 834px)').matches;
+  }
+
   function openClinicStudiosTab(subView) {
     businessMode = 'clinic';
     activeView = 'studios';
     if (subView) studioSubView = subView;
+    if (subView === 'clients' && isMobileAdminViewport()) {
+      studioClientMobilePane = 'list';
+      studioClientAdding = false;
+    }
     studioFlash = '';
     updateBusinessModeUI();
     renderView();
@@ -565,6 +575,7 @@
     if (!id || !S?.getClient(id)) return false;
     selectedStudioClientId = id;
     studioClientAdding = false;
+    if (isMobileAdminViewport()) studioClientMobilePane = 'detail';
     checkInactiveProgramFutureAppointments(id);
     try {
       const mergeOptions = S.getMergeCandidatesForClient(id, '') || [];
@@ -1148,6 +1159,8 @@
       studioPostVisitFollowUpSkipped,
       businessMode,
       clinicSideNav: businessMode === 'clinic',
+      isMobileAdmin: isMobileAdminViewport(),
+      studioClientMobilePane,
     };
   }
 
@@ -4329,11 +4342,19 @@
     $('#addClientBtn')?.addEventListener('click', () => {
       studioClientAdding = true;
       selectedStudioClientId = null;
+      if (isMobileAdminViewport()) studioClientMobilePane = 'add';
       renderView();
     });
 
     $('#cancelAddClientBtn')?.addEventListener('click', () => {
       studioClientAdding = false;
+      if (isMobileAdminViewport()) studioClientMobilePane = 'list';
+      renderView();
+    });
+
+    $('#studioClientMobileBack')?.addEventListener('click', () => {
+      studioClientAdding = false;
+      studioClientMobilePane = 'list';
       renderView();
     });
 

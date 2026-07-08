@@ -5979,6 +5979,25 @@ img { max-width: 100%; display: block; }
   gap: 4px;
 }
 
+.studio-client-mobile-back {
+  display: none;
+}
+
+.studio-client-count-badge {
+  font-weight: 700;
+}
+
+.studio-client-search-wrap {
+  padding: 0 0 12px;
+}
+
+.studio-client-detail-meta {
+  margin: 4px 0 0;
+  color: var(--apple-gray-5);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
 .studio-client-detail-head {
   display: flex;
   flex-wrap: wrap;

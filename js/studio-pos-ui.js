@@ -3305,22 +3305,28 @@ window.RenvoaStudioUI = (function () {
     const intakeCount = visitRecords.filter((v) => v.intakeCompleted).length;
     const photoCount = selected ? S().getClientPhotos(selected.id).length : 0;
 
+    const isMobile = !!ctx.isMobileAdmin;
+    const mobilePane = isMobile ? (adding ? 'add' : (ctx.studioClientMobilePane || 'list')) : 'split';
+
     return `
-      ${pageHead('Clients', 'Profiles, visit notes, intake history, and duplicate management')}
+      ${isMobile ? '' : pageHead('Clients', 'Profiles, visit notes, intake history, and duplicate management')}
       ${subnav('clients', ctx.newInquiries, ctx.clinicSideNav)}
       ${flashBanner(ctx.studioFlash, ctx.studioFlashType)}
-      ${allDupGroups.length ? `
+      ${allDupGroups.length && (!isMobile || mobilePane === 'list') ? `
         <div class="studio-client-dup-alert">
           <strong>${allDupGroups.length} duplicate group${allDupGroups.length !== 1 ? 's' : ''} detected</strong>
           <span>Select a client with the duplicate badge to review and merge profiles.</span>
         </div>` : ''}
-      <div class="admin-orders-layout studio-client-layout">
-        <section class="admin-panel admin-panel-list">
-          <div class="admin-panel-head"><h2>Clients (${listClients.length})</h2>
+      <div class="admin-orders-layout studio-client-layout${isMobile ? ' is-mobile' : ''}"${isMobile ? ` data-mobile-pane="${mobilePane}"` : ''}>
+        <section class="admin-panel admin-panel-list studio-client-list-panel">
+          <div class="admin-panel-head studio-client-list-head">
+            <h2>${isMobile ? 'Clients' : `Clients (${listClients.length})`}${isMobile ? ` <span class="studio-client-count-badge">${listClients.length}</span>` : ''}</h2>
             <button type="button" class="btn-secondary btn-sm" id="addClientBtn">+ Add</button>
           </div>
-          <input type="search" id="clientSearch" class="studio-search" placeholder="Search name, email, phone…" value="${esc(ctx.studioClientSearch || '')}">
-          <div class="admin-order-list">
+          <div class="studio-client-search-wrap">
+            <input type="search" id="clientSearch" class="studio-search studio-client-search" placeholder="Search name, email, phone…" value="${esc(ctx.studioClientSearch || '')}" enterkeyhint="search" autocomplete="off">
+          </div>
+          <div class="admin-order-list studio-client-order-list">
             ${listClients.map((c) => `
               <button type="button" class="admin-order-card studio-client-card${selected?.id === c.id ? ' active' : ''}${dupClientIds.has(c.id) ? ' has-duplicate' : ''}" data-studio-client="${esc(c.id)}">
                 <div class="admin-order-card-top">
@@ -3338,6 +3344,10 @@ window.RenvoaStudioUI = (function () {
           </div>
         </section>
         <section class="admin-panel admin-panel-detail studio-client-detail"${selected && !adding ? ` data-client-id="${selected.id}"` : ''}>
+          ${isMobile && (mobilePane === 'detail' || mobilePane === 'add') ? `
+            <button type="button" class="studio-client-mobile-back" id="studioClientMobileBack" aria-label="Back to client list">
+              <span aria-hidden="true">←</span> All clients
+            </button>` : ''}
           ${adding ? `
             <h2>New client</h2>
             <p class="studio-client-pin-notice">Creating a client requires the admin PIN.</p>
@@ -3355,9 +3365,15 @@ window.RenvoaStudioUI = (function () {
           ` : selected ? `
             <input type="hidden" id="studioClientId" value="${selected.id}">
             <div class="studio-client-detail-head">
-              <div>
+              <div class="studio-client-detail-identity">
                 <h2>${esc(selected.name)}${firstVisitBadge(selected.id, selected.phone)}</h2>
-                <p>${esc(selected.email)}${selected.phone ? ` · ${esc(selected.phone)}` : ''}${selected.gender ? ` · ${esc(selected.gender)}` : ''}${selected.birthday ? ` · Birthday ${esc(S().formatBirthdayLabel(selected.birthday))}` : ''}${selected.portalCode ? ` · Portal code <strong>${esc(selected.portalCode)}</strong>` : ''}</p>
+                <p class="studio-client-detail-meta">${[
+                  selected.phone ? esc(selected.phone) : '',
+                  selected.email ? esc(selected.email) : '',
+                  selected.gender ? esc(selected.gender) : '',
+                  selected.birthday ? `Birthday ${esc(S().formatBirthdayLabel(selected.birthday))}` : '',
+                  selected.portalCode ? `Portal <strong>${esc(selected.portalCode)}</strong>` : '',
+                ].filter(Boolean).join(' · ')}</p>
                 ${(selected.tags || []).length ? `<div class="studio-client-tags">${(selected.tags || []).map((t) => `<span class="studio-client-tag${t === S().FIRST_VISIT_TAG ? ' studio-client-tag-first' : ''}">${esc(t)}</span>`).join('')}</div>` : ''}
               </div>
               <div class="pos-quote-actions studio-client-detail-actions">
@@ -3366,7 +3382,7 @@ window.RenvoaStudioUI = (function () {
               </div>
             </div>
             ${renderClientDuplicateBanner(selected, dupGroups, ctx.studioClientMergeSecondaryId)}
-            <div class="studio-client-tabs">
+            <div class="studio-client-tabs studio-client-tabs-scroll">
               <button type="button" class="studio-pos-tab${tab === 'overview' ? ' active' : ''}" data-client-tab="overview">Overview</button>
               <button type="button" class="studio-pos-tab${tab === 'visits' ? ' active' : ''}" data-client-tab="visits">Visit notes <span class="studio-client-tab-count">${notesCount}</span></button>
               <button type="button" class="studio-pos-tab${tab === 'intake' ? ' active' : ''}" data-client-tab="intake">Intake history <span class="studio-client-tab-count">${intakeCount}</span></button>
