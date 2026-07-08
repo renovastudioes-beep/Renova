@@ -52,6 +52,9 @@
   let studioPosAuthAction = null;
   let studioPosAuthPending = null;
   let studioPresentOpen = false;
+  let studioCashRegisterOpen = false;
+  let studioCashRegisterDue = 0;
+  let studioCashTenderInput = '';
   let studioFinanceOpen = false;
   let studioFinanceContext = null;
   let studioFinanceEventBound = false;
@@ -138,6 +141,7 @@
     'posPresentOverlay',
     'studioFinanceOverlay',
     'studioProgramModal',
+    'studioCashRegisterModal',
   ];
 
   function studioNotify(msg, type) {
@@ -1040,6 +1044,9 @@
       studioPosAuthAction,
       studioPosAuthPending,
       studioPresentOpen,
+      studioCashRegisterOpen,
+      studioCashRegisterDue,
+      studioCashTenderInput,
       studioFinanceOpen,
       studioFinanceContext,
       selectedStudioInquiryId,
@@ -2668,6 +2675,244 @@
     });
   }
 
+  function resolvePosClientFromCart() {
+    const S = window.RenvoaStudios;
+    const name = ($('#posClientName')?.value || studioPosCart.clientName || '').trim();
+    const matches = S.findClientsByName(name);
+    const existing = (studioPosCart.clientId && S.getClient(studioPosCart.clientId))
+      || (matches.length === 1 ? matches[0] : null)
+      || matches[0]
+      || null;
+    return { name, client: existing || null };
+  }
+
+  function getPosCheckoutDueTotal() {
+    const S = window.RenvoaStudios;
+    const calc = window.RenvoaStudioUI?.calcPosTotals;
+    if (!S || !calc) return 0;
+    const posClient = studioPosCart.clientId
+      ? S.getClient(studioPosCart.clientId)
+      : S.getClients().find((c) => c.name === studioPosCart.clientName);
+    const creditBalance = posClient ? S.getClientCreditBalance(posClient.id) : 0;
+    const applyCredit = studioPosMode !== 'walkin'
+      && ($('#posApplyCredit') ? $('#posApplyCredit').checked : studioPosApplyCredit);
+    return calc(studioPosCart, applyCredit, creditBalance).dueTotal;
+  }
+
+  function parseCashTenderAmount(input) {
+    if (!input || input === '.') return 0;
+    const n = parseFloat(input);
+    return Number.isFinite(n) ? Math.max(0, n) : 0;
+  }
+
+  function openCashRegister(dueTotal) {
+    studioCashRegisterDue = Math.max(0, dueTotal);
+    studioCashTenderInput = '';
+    studioCashRegisterOpen = true;
+  }
+
+  function closeCashRegister() {
+    studioCashRegisterOpen = false;
+    studioCashRegisterDue = 0;
+    studioCashTenderInput = '';
+  }
+
+  function appendCashTenderKey(key) {
+    let raw = studioCashTenderInput || '';
+    if (key === 'C') {
+      studioCashTenderInput = '';
+      return;
+    }
+    if (key === '.') {
+      if (raw.includes('.')) return;
+      studioCashTenderInput = raw ? `${raw}.` : '0.';
+      return;
+    }
+    if (raw.includes('.')) {
+      const [, dec] = raw.split('.');
+      if (dec && dec.length >= 2) return;
+    }
+    if (raw === '0') raw = '';
+    studioCashTenderInput = raw + key;
+  }
+
+  function setCashTenderQuick(amount) {
+    studioCashTenderInput = Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
+  }
+
+  function setCashTenderExact() {
+    const due = studioCashRegisterDue || 0;
+    studioCashTenderInput = Number.isInteger(due) ? String(due) : due.toFixed(2);
+  }
+
+  function completePosSale(cashPayment = null) {
+    const S = window.RenvoaStudios;
+    if (!S || !studioPosCart.items.length) return false;
+
+    const grossSubtotal = studioPosCart.items.reduce((s, i) => s + i.price * (i.qty || 1), 0);
+    const discount = Math.min(studioPosCart.discount || 0, grossSubtotal);
+    const netSubtotal = Math.max(0, grossSubtotal - discount);
+    const noteParts = [];
+    if (discount > 0) noteParts.push(`Discount: ${S.formatPrice(discount)}`);
+
+    const paymentMethod = cashPayment ? 'cash' : ($('#posPaymentMethod')?.value || 'card');
+    if (cashPayment) {
+      noteParts.push(`Cash tendered: ${S.formatPrice(cashPayment.tendered)} · Change: ${S.formatPrice(cashPayment.change)}`);
+    }
+
+    if (studioPosMode === 'walkin') {
+      const hasNonShelf = studioPosCart.items.some((i) => !S.isShelfPosItem(i));
+      if (hasNonShelf) {
+        studioNotify('Walk-in sales are limited to shelf items and quick add-ons.', 'error');
+        return false;
+      }
+      const label = ($('#posWalkInLabel')?.value || '').trim() || 'Walk-in';
+      const total = netSubtotal;
+      if (cashPayment && cashPayment.tendered < total - 0.005) {
+        studioNotify('Amount tendered is less than total due.', 'error');
+        return false;
+      }
+      const tx = S.createTransaction({
+        type: 'walkin',
+        walkIn: true,
+        clientId: '',
+        clientName: label,
+        items: studioPosCart.items,
+        subtotal: grossSubtotal,
+        discount,
+        creditApplied: 0,
+        total,
+        paymentMethod,
+        cashTendered: cashPayment?.tendered || 0,
+        cashChange: cashPayment?.change || 0,
+        notes: [noteParts.join(' · '), 'Walk-in shelf sale — no client profile'].filter(Boolean).join(' · '),
+      });
+      studioPosCart = { clientName: '', clientId: '', items: [], discount: 0 };
+      studioPresentOpen = false;
+      closePosAuthModal();
+      closeCashRegister();
+      studioSubView = 'transactions';
+      selectedStudioTransactionId = tx.id;
+      studioNotify(`Walk-in sale recorded — ${S.formatPrice(total)}`, 'success');
+      return true;
+    }
+
+    const { name, client: matched } = resolvePosClientFromCart();
+    if (!name) {
+      studioNotify('Enter a client name before completing the sale.', 'error');
+      return false;
+    }
+    const client = S.upsertClient({
+      id: matched?.id || studioPosCart.clientId,
+      name,
+      phone: matched?.phone || '',
+      email: matched?.email || '',
+    });
+    const creditBalance = S.getClientCreditBalance(client.id);
+    const applyCheckbox = $('#posApplyCredit');
+    const shouldApply = creditBalance > 0 && (applyCheckbox ? applyCheckbox.checked : studioPosApplyCredit);
+    const creditToApply = shouldApply ? Math.min(creditBalance, netSubtotal) : 0;
+    const total = Math.max(0, netSubtotal - creditToApply);
+    if (creditToApply > 0) noteParts.push(`Studio credit applied: ${S.formatPrice(creditToApply)}`);
+    if (cashPayment && cashPayment.tendered < total - 0.005) {
+      studioNotify('Amount tendered is less than total due.', 'error');
+      return false;
+    }
+    const postVisitApptId = studioPostVisitApptId;
+    const pkgCartItems = studioPosCart.items.filter((i) => i.packageVisit);
+    if (pkgCartItems.length) {
+      const blocked = S.assertPackageVisitRedemptionAllowed(client.id, pkgCartItems[0].programId, postVisitApptId || pkgCartItems[0].postVisitApptId);
+      if (blocked.error) {
+        studioNotify(blocked.error, 'error');
+        if (blocked.needsCancelPrompt) checkInactiveProgramFutureAppointments(client.id);
+        return false;
+      }
+    }
+    const warrantyCartItems = studioPosCart.items.filter((i) => i.warrantyReinstatement);
+    warrantyCartItems.forEach((item) => {
+      noteParts.push(`Warranty reinstated — ${item.programName}`);
+    });
+    const tx = S.createTransaction({
+      clientId: client.id,
+      clientName: name,
+      items: studioPosCart.items,
+      subtotal: grossSubtotal,
+      discount,
+      creditApplied: creditToApply,
+      total,
+      paymentMethod,
+      cashTendered: cashPayment?.tendered || 0,
+      cashChange: cashPayment?.change || 0,
+      appointmentId: postVisitApptId || pkgCartItems[0]?.postVisitApptId || '',
+      notes: noteParts.join(' · '),
+    });
+    warrantyCartItems.forEach((item) => {
+      S.recordWarrantyReinstatement({
+        clientId: client.id,
+        programId: item.programId,
+        programName: item.programName,
+        amount: item.price,
+        transactionId: tx.id,
+        appointmentId: postVisitApptId || '',
+        anchorDate: item.anchorDate,
+        recommendedByDate: item.recommendedByDate,
+        graceDeadline: item.graceDeadline,
+        daysLate: item.daysLate,
+        notes: `Reinstated at POS — ${S.formatPrice(item.price)}`,
+      });
+    });
+    pkgCartItems.forEach((pkgCartItem) => {
+      const redeemApptId = postVisitApptId || pkgCartItem.postVisitApptId;
+      if (!redeemApptId) return;
+      const redeem = S.redeemPackageVisitOnAppointment(redeemApptId, {
+        programId: pkgCartItem.programId,
+        programName: pkgCartItem.programName,
+        programPaymentPlan: pkgCartItem.programPaymentPlan,
+        visitNumber: pkgCartItem.visitNumber,
+        visitsIncluded: pkgCartItem.visitsIncluded,
+        visitValue: pkgCartItem.visitValue,
+        transactionId: tx.id,
+        serviceName: pkgCartItem.name,
+      });
+      if (redeem?.error) {
+        studioNotify(redeem.error, 'warn');
+      } else if (redeem?.fields) {
+        studioNotify(`Prepaid visit ${redeem.fields.visitNumber}/${redeem.fields.visitsIncluded} redeemed.`, 'success');
+      }
+    });
+    if (creditToApply > 0) {
+      S.applyClientCredit(client.id, creditToApply, {
+        transactionId: tx.id,
+        notes: `Applied at POS — ${S.formatPrice(creditToApply)}`,
+      });
+    }
+    const hadPostVisit = !!postVisitApptId;
+    const pendingRebookApptId = studioPostVisitPendingRebookApptId;
+    studioPosCart = { clientName: '', clientId: '', items: [], discount: 0 };
+    studioPosApplyCredit = true;
+    studioPresentOpen = false;
+    closePosAuthModal();
+    closeCashRegister();
+    if (hadPostVisit) {
+      finishPostVisitCheckout();
+      studioSubView = 'transactions';
+      selectedStudioTransactionId = tx.id;
+      if (pendingRebookApptId) {
+        studioNotify(`Payment complete — visit done, follow-up on calendar. ${S.formatPrice(total)} collected.`, 'success');
+      } else {
+        studioNotify(`Payment complete — visit done. ${S.formatPrice(total)} collected.`, 'success');
+      }
+    } else {
+      studioSubView = 'transactions';
+      selectedStudioTransactionId = tx.id;
+      const msg = creditToApply
+        ? `Sale recorded — ${S.formatPrice(total)} due (${S.formatPrice(creditToApply)} credit applied)`
+        : `Sale recorded — ${S.formatPrice(total)}`;
+      studioNotify(msg, 'success');
+    }
+    return true;
+  }
+
   function bindStudioEvents() {
     const S = window.RenvoaStudios;
     if (!S) return;
@@ -3328,16 +3573,6 @@
       });
     });
 
-    function resolvePosClient() {
-      const name = ($('#posClientName')?.value || studioPosCart.clientName || '').trim();
-      const matches = S.findClientsByName(name);
-      const existing = (studioPosCart.clientId && S.getClient(studioPosCart.clientId))
-        || (matches.length === 1 ? matches[0] : null)
-        || matches[0]
-        || null;
-      return { name, client: existing || null };
-    }
-
     $('#posClientName')?.addEventListener('input', (e) => {
       studioPosCart.clientName = e.target.value;
       const matches = S.findClientsByName(e.target.value.trim());
@@ -3359,156 +3594,57 @@
         renderView();
         return;
       }
-      const grossSubtotal = studioPosCart.items.reduce((s, i) => s + i.price * (i.qty || 1), 0);
-      const discount = Math.min(studioPosCart.discount || 0, grossSubtotal);
-      const netSubtotal = Math.max(0, grossSubtotal - discount);
-      const noteParts = [];
-      if (discount > 0) noteParts.push(`Discount: ${S.formatPrice(discount)}`);
-
-      if (studioPosMode === 'walkin') {
-        const hasNonShelf = studioPosCart.items.some((i) => !S.isShelfPosItem(i));
-        if (hasNonShelf) {
-          studioNotify('Walk-in sales are limited to shelf items and quick add-ons.', 'error');
-          renderView();
-          return;
-        }
-        const label = ($('#posWalkInLabel')?.value || '').trim() || 'Walk-in';
-        const total = netSubtotal;
-        const tx = S.createTransaction({
-          type: 'walkin',
-          walkIn: true,
-          clientId: '',
-          clientName: label,
-          items: studioPosCart.items,
-          subtotal: grossSubtotal,
-          discount,
-          creditApplied: 0,
-          total,
-          paymentMethod: $('#posPaymentMethod')?.value || 'card',
-          notes: [noteParts.join(' · '), 'Walk-in shelf sale — no client profile'].filter(Boolean).join(' · '),
-        });
-        studioPosCart = { clientName: '', clientId: '', items: [], discount: 0 };
-        studioPresentOpen = false;
-        closePosAuthModal();
-        studioSubView = 'transactions';
-        selectedStudioTransactionId = tx.id;
-        studioNotify(`Walk-in sale recorded — ${S.formatPrice(total)}`, 'success');
+      const paymentMethod = $('#posPaymentMethod')?.value || 'card';
+      if (paymentMethod === 'cash') {
+        openCashRegister(getPosCheckoutDueTotal());
         renderView();
         return;
       }
+      if (completePosSale()) renderView();
+      else renderView();
+    });
 
-      const { name, client: matched } = resolvePosClient();
-      if (!name) {
-        studioNotify('Enter a client name before completing the sale.', 'error');
+    $$('[data-cash-register-close]').forEach((el) => {
+      el.addEventListener('click', () => {
+        closeCashRegister();
         renderView();
-        return;
-      }
-      const client = S.upsertClient({
-        id: matched?.id || studioPosCart.clientId,
-        name,
-        phone: matched?.phone || '',
-        email: matched?.email || '',
       });
-      const creditBalance = S.getClientCreditBalance(client.id);
-      const applyCheckbox = $('#posApplyCredit');
-      const shouldApply = creditBalance > 0 && (applyCheckbox ? applyCheckbox.checked : studioPosApplyCredit);
-      const creditToApply = shouldApply ? Math.min(creditBalance, netSubtotal) : 0;
-      const total = Math.max(0, netSubtotal - creditToApply);
-      if (creditToApply > 0) noteParts.push(`Studio credit applied: ${S.formatPrice(creditToApply)}`);
-      const postVisitApptId = studioPostVisitApptId;
-      const pkgCartItems = studioPosCart.items.filter((i) => i.packageVisit);
-      if (pkgCartItems.length) {
-        const blocked = S.assertPackageVisitRedemptionAllowed(client.id, pkgCartItems[0].programId, postVisitApptId || pkgCartItems[0].postVisitApptId);
-        if (blocked.error) {
-          studioNotify(blocked.error, 'error');
-          if (blocked.needsCancelPrompt) checkInactiveProgramFutureAppointments(client.id);
-          renderView();
-          return;
-        }
-      }
-      const warrantyCartItems = studioPosCart.items.filter((i) => i.warrantyReinstatement);
-      warrantyCartItems.forEach((item) => {
-        noteParts.push(`Warranty reinstated — ${item.programName}`);
+    });
+
+    $$('[data-cash-key]').forEach((el) => {
+      el.addEventListener('click', () => {
+        appendCashTenderKey(el.dataset.cashKey);
+        renderView();
       });
-      const tx = S.createTransaction({
-        clientId: client.id,
-        clientName: name,
-        items: studioPosCart.items,
-        subtotal: grossSubtotal,
-        discount,
-        creditApplied: creditToApply,
-        total,
-        paymentMethod: $('#posPaymentMethod')?.value || 'card',
-        appointmentId: postVisitApptId || pkgCartItems[0]?.postVisitApptId || '',
-        notes: noteParts.join(' · '),
+    });
+
+    $$('[data-cash-quick]').forEach((el) => {
+      el.addEventListener('click', () => {
+        setCashTenderQuick(Number(el.dataset.cashQuick) || 0);
+        renderView();
       });
-      warrantyCartItems.forEach((item) => {
-        S.recordWarrantyReinstatement({
-          clientId: client.id,
-          programId: item.programId,
-          programName: item.programName,
-          amount: item.price,
-          transactionId: tx.id,
-          appointmentId: postVisitApptId || '',
-          anchorDate: item.anchorDate,
-          recommendedByDate: item.recommendedByDate,
-          graceDeadline: item.graceDeadline,
-          daysLate: item.daysLate,
-          notes: `Reinstated at POS — ${S.formatPrice(item.price)}`,
-        });
-      });
-      pkgCartItems.forEach((pkgCartItem) => {
-        const redeemApptId = postVisitApptId || pkgCartItem.postVisitApptId;
-        if (!redeemApptId) return;
-        const redeem = S.redeemPackageVisitOnAppointment(redeemApptId, {
-          programId: pkgCartItem.programId,
-          programName: pkgCartItem.programName,
-          programPaymentPlan: pkgCartItem.programPaymentPlan,
-          visitNumber: pkgCartItem.visitNumber,
-          visitsIncluded: pkgCartItem.visitsIncluded,
-          visitValue: pkgCartItem.visitValue,
-          transactionId: tx.id,
-          serviceName: pkgCartItem.name,
-        });
-        if (redeem?.error) {
-          studioNotify(redeem.error, 'warn');
-        } else if (redeem?.fields) {
-          studioNotify(`Prepaid visit ${redeem.fields.visitNumber}/${redeem.fields.visitsIncluded} redeemed.`, 'success');
-        }
-      });
-      if (creditToApply > 0) {
-        S.applyClientCredit(client.id, creditToApply, {
-          transactionId: tx.id,
-          notes: `Applied at POS — ${S.formatPrice(creditToApply)}`,
-        });
-      }
-      const hadPostVisit = !!postVisitApptId;
-      const pendingRebookApptId = studioPostVisitPendingRebookApptId;
-      studioPosCart = { clientName: '', clientId: '', items: [], discount: 0 };
-      studioPosApplyCredit = true;
-      studioPresentOpen = false;
-      closePosAuthModal();
-      if (hadPostVisit) {
-        finishPostVisitCheckout();
-        studioSubView = 'transactions';
-        selectedStudioTransactionId = tx.id;
-        if (pendingRebookApptId) {
-          studioNotify(`Payment complete — visit done, follow-up on calendar. ${S.formatPrice(total)} collected.`, 'success');
-        } else {
-          studioNotify(`Payment complete — visit done. ${S.formatPrice(total)} collected.`, 'success');
-        }
-      } else {
-        studioSubView = 'transactions';
-        selectedStudioTransactionId = tx.id;
-        const msg = creditToApply
-          ? `Sale recorded — ${S.formatPrice(total)} due (${S.formatPrice(creditToApply)} credit applied)`
-          : `Sale recorded — ${S.formatPrice(total)}`;
-        studioNotify(msg, 'success');
-      }
+    });
+
+    $('#posCashExactBtn')?.addEventListener('click', () => {
+      setCashTenderExact();
       renderView();
     });
 
+    $('#posCashRegisterComplete')?.addEventListener('click', () => {
+      const due = studioCashRegisterDue || 0;
+      const tendered = parseCashTenderAmount(studioCashTenderInput);
+      const change = Math.max(0, Math.round((tendered - due) * 100) / 100);
+      if (tendered < due - 0.005) {
+        studioNotify('Amount tendered must cover the total due.', 'error');
+        renderView();
+        return;
+      }
+      if (completePosSale({ tendered, change })) renderView();
+      else renderView();
+    });
+
     $('#posPaymentMethod')?.addEventListener('change', (e) => {
+      if (e.target.value !== 'cash') closeCashRegister();
       if (e.target.value === 'financing') {
         const gross = studioPosCart.items.reduce((s, i) => s + (i.price || 0) * (i.qty || 1), 0);
         const net = Math.max(0, gross - (studioPosCart.discount || 0));
@@ -4491,6 +4627,28 @@
       renderView();
     });
 
+    $('#studioCloudSyncBtn')?.addEventListener('click', async () => {
+      const storage = window.StudioStorage;
+      if (!storage?.refreshFromCloud) {
+        studioNotify('Cloud storage is not configured.', 'error');
+        return;
+      }
+      try {
+        const result = await storage.refreshFromCloud();
+        const clientCount = window.RenvoaStudios?.getClients?.().length ?? 0;
+        studioNotify(
+          result?.updated
+            ? `Synced from cloud — ${clientCount} client${clientCount !== 1 ? 's' : ''} on this device.`
+            : `Already up to date — ${clientCount} client${clientCount !== 1 ? 's' : ''} on this device.`,
+          'success',
+        );
+        renderView();
+      } catch (err) {
+        studioNotify(err.message || 'Cloud sync failed.', 'error');
+        renderView();
+      }
+    });
+
     $('#studioCloudMigrateBtn')?.addEventListener('click', async () => {
       const storage = window.StudioStorage;
       if (!storage?.migrateLocalToCloud) {
@@ -4499,10 +4657,15 @@
       }
       try {
         const result = await storage.migrateLocalToCloud();
-        studioNotify(`Uploaded ${result.migrated} data collection${result.migrated !== 1 ? 's' : ''} to cloud.`, 'success');
+        const clientCount = window.RenvoaStudios?.getClients?.().length ?? 0;
+        studioNotify(
+          `Merged and uploaded ${result.migrated} collection${result.migrated !== 1 ? 's' : ''} — ${clientCount} client${clientCount !== 1 ? 's' : ''} on this device now.`,
+          'success',
+        );
         renderView();
       } catch (err) {
         studioNotify(err.message || 'Cloud upload failed.', 'error');
+        renderView();
       }
     });
 

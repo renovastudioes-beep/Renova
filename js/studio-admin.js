@@ -2696,6 +2696,8 @@ window.RenvoaStudios = (function () {
       notes: data.notes || '',
       appointmentId: data.appointmentId || '',
       creditApplied: data.creditApplied || 0,
+      cashTendered: data.cashTendered || 0,
+      cashChange: data.cashChange || 0,
       refundOf: data.refundOf || '',
       refundedAmount: data.refundedAmount || 0,
     };
@@ -5808,7 +5810,28 @@ window.RenvoaStudios = (function () {
     }
   }
 
+  function bindStudioStorageRefresh() {
+    const storage = window.StudioStorage;
+    if (!storage?.onChange) return;
+    const syncKeys = new Set([
+      KEYS.clients,
+      KEYS.appointments,
+      KEYS.transactions,
+      KEYS.clientCredits,
+      KEYS.programOverrides,
+      KEYS.programVisitLog,
+      KEYS.programWarrantyLog,
+    ]);
+    storage.onChange((key) => {
+      if (syncKeys.has(key)) {
+        writeFingerprints.delete(key);
+        invalidateClientDataCaches();
+      }
+    });
+  }
+
   scheduleStudioDataBootTasks();
+  bindStudioStorageRefresh();
 
   return {
     KEYS,

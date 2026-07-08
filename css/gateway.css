@@ -20,7 +20,9 @@ ul { list-style: none; }
 :root {
   --ease-spring: cubic-bezier(0.34, 1.25, 0.64, 1);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-open: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-panel: 0.75s;
+  --dur-open: 0.82s;
   --blue: #0071e3;
   --hair-accent: #c9a87c;
 }
@@ -834,16 +836,96 @@ body.gateway-touch .gateway-panel {
 
 .renova-gateway.is-navigating {
   pointer-events: none;
+  transition:
+    grid-template-columns var(--dur-open) var(--ease-open),
+    grid-template-rows var(--dur-open) var(--ease-open);
+}
+
+.renova-gateway.is-navigating-peptides {
+  grid-template-columns: 1fr 0fr !important;
+}
+
+.renova-gateway.is-navigating-hair {
+  grid-template-columns: 0fr 1fr !important;
+}
+
+.renova-gateway.is-navigating .gateway-split-line,
+.renova-gateway.is-navigating .gateway-divider {
+  opacity: 0 !important;
+  transition: opacity 0.35s var(--ease-out), transform 0.45s var(--ease-out);
+}
+
+.renova-gateway.is-navigating .gateway-hero-center {
+  transition: opacity 0.42s var(--ease-out), transform 0.55s var(--ease-open);
+  opacity: 0 !important;
+  transform: translate(-50%, -50%) scale(0.88) !important;
 }
 
 .renova-gateway.is-navigating .gateway-panel {
-  transition: opacity 0.45s var(--ease-out), filter 0.45s var(--ease-out);
+  transition:
+    opacity 0.5s var(--ease-out),
+    filter 0.55s var(--ease-out),
+    transform 0.65s var(--ease-open);
+}
+
+.renova-gateway.is-navigating-peptides .gateway-panel-peptides,
+.renova-gateway.is-navigating-hair .gateway-panel-hair {
+  z-index: 12 !important;
+}
+
+.renova-gateway.is-navigating-peptides .gateway-panel-peptides .gateway-panel-veil,
+.renova-gateway.is-navigating-hair .gateway-panel-hair .gateway-panel-veil {
+  opacity: 0 !important;
+  transition: opacity 0.45s var(--ease-out);
+}
+
+.renova-gateway.is-navigating-peptides .gateway-panel-peptides .gateway-stage,
+.renova-gateway.is-navigating-peptides .gateway-panel-peptides .gateway-panel-inner,
+.renova-gateway.is-navigating-hair .gateway-panel-hair .gateway-stage,
+.renova-gateway.is-navigating-hair .gateway-panel-hair .gateway-panel-inner {
+  opacity: 1 !important;
+  filter: none !important;
+  transform: translateY(0) scale(1.02) !important;
+  transition:
+    opacity 0.5s var(--ease-out),
+    filter 0.55s var(--ease-out),
+    transform 0.7s var(--ease-open);
 }
 
 .renova-gateway.is-navigating-peptides .gateway-panel-hair,
 .renova-gateway.is-navigating-hair .gateway-panel-peptides {
-  opacity: 0.15;
-  filter: blur(2px);
+  opacity: 0 !important;
+  filter: blur(8px) saturate(0.7) !important;
+  transform: scale(0.98);
+  pointer-events: none;
+}
+
+.renova-gateway.is-navigating.is-navigating-ready .gateway-panel-peptides .gateway-panel-bg,
+.renova-gateway.is-navigating.is-navigating-ready .gateway-panel-hair .gateway-panel-bg {
+  transform: scale(1.04);
+  transition: transform 0.8s var(--ease-open);
+}
+
+body.gateway-opening::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s var(--ease-out);
+}
+
+body.gateway-opening-peptides::before {
+  background: linear-gradient(180deg, #fbfbfd 0%, #f0f4fa 55%, #e8eef8 100%);
+}
+
+body.gateway-opening-hair::before {
+  background: linear-gradient(180deg, #2a2624 0%, #1d1b19 50%, #141210 100%);
+}
+
+body.gateway-opening.gateway-opening-ready::before {
+  opacity: 1;
 }
 
 /* ---- Touch phones & tablets ---- */
@@ -922,6 +1004,16 @@ body.gateway-touch .gateway-panel {
   .renova-gateway {
     grid-template-columns: 1fr !important;
     grid-template-rows: 50fr 50fr;
+  }
+
+  .renova-gateway.is-navigating-peptides {
+    grid-template-rows: 1fr 0fr !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .renova-gateway.is-navigating-hair {
+    grid-template-rows: 0fr 1fr !important;
+    grid-template-columns: 1fr !important;
   }
 
   .gateway-hero-center {

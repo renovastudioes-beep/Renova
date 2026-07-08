@@ -259,6 +259,20 @@ body {
     max-width: none;
   }
 
+  .studio-cash-register {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .studio-cash-numpad-key {
+    min-height: 58px;
+  }
+
+  .studio-cash-register-complete {
+    min-height: 52px;
+    font-size: 13px;
+  }
+
   .admin-split,
   .studio-cloud-panel {
     margin-top: 16px;

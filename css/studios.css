@@ -36,6 +36,15 @@
   scroll-margin-top: calc(var(--nav-height) + var(--studio-line-switch-h) + 12px);
 }
 
+html.gateway-page-enter:not(.gateway-page-ready) .studios-page {
+  opacity: 0;
+}
+
+html.gateway-page-enter.gateway-page-ready .studios-page {
+  opacity: 1;
+  transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* ——— Clinic / Barber / Salon switcher ——— */
 .studio-line-switch-wrap {
   position: sticky;

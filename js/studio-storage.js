@@ -81,7 +81,7 @@ window.StudioStorage = (function () {
     return new Date(item?.updatedAt || item?.createdAt || item?.at || 0).getTime();
   }
 
-  function mergeArrayCollections(incoming, existing) {
+  function mergeArrayUnion(incoming, existing) {
     if (!Array.isArray(incoming)) return incoming;
     if (!Array.isArray(existing) || !existing.length) return incoming;
     const byId = new Map();
@@ -102,24 +102,56 @@ window.StudioStorage = (function () {
     return [...byId.values()];
   }
 
-  /** Detect stale partial cloud snapshots that would wipe newer local rows. */
-  function isSuspectPartialArraySnapshot(incoming, existing) {
-    if (!Array.isArray(incoming) || !Array.isArray(existing)) return false;
-    if (!incoming.length || incoming.length >= existing.length) return false;
-    const existingIds = new Set(existing.map((item) => String(item?.id || '').trim()).filter(Boolean));
-    if (!existingIds.size) return false;
-    const known = incoming.every((item) => existingIds.has(String(item?.id || '').trim()));
-    return known && incoming.length <= existing.length * 0.85;
+  function getExistingCollection(key, fallback = []) {
+    if (cache.has(key)) return cache.get(key);
+    return readLocal(key, fallback);
   }
 
-  function mergeIncomingCollection(key, incoming) {
+  /** Union-merge for cloud load, realtime, and refresh — never drop rows from other devices. */
+  function mergeArrayFromRemote(key, incoming) {
     if (!ARRAY_MERGE_KEYS.has(key) || !Array.isArray(incoming)) return incoming;
-    const existing = cache.has(key)
-      ? cache.get(key)
-      : readLocal(key, Array.isArray(incoming) ? [] : incoming);
+    const existing = getExistingCollection(key, []);
     if (!Array.isArray(existing) || !existing.length) return incoming;
-    if (!isSuspectPartialArraySnapshot(incoming, existing)) return incoming;
-    return mergeArrayCollections(incoming, existing);
+    return mergeArrayUnion(incoming, existing);
+  }
+
+  /**
+   * Write-path merge: honor intentional deletions (strict subset), but block stale
+   * partial snapshots from one device overwriting a fuller list in cloud.
+   */
+  function reconcileArrayWrite(key, incoming) {
+    if (!ARRAY_MERGE_KEYS.has(key) || !Array.isArray(incoming)) return incoming;
+    const existing = getExistingCollection(key, []);
+    if (!Array.isArray(existing) || !existing.length) return incoming;
+
+    const existingById = new Map();
+    existing.forEach((item) => {
+      const id = String(item?.id || '').trim();
+      if (id) existingById.set(id, item);
+    });
+
+    const incomingIds = incoming
+      .map((item) => String(item?.id || '').trim())
+      .filter(Boolean);
+    if (!incomingIds.length) return incoming;
+
+    const allIncomingKnown = incomingIds.every((id) => existingById.has(id));
+    const isDeletion = allIncomingKnown && incoming.length < existing.length;
+
+    if (isDeletion) {
+      return incoming.map((item) => {
+        const id = String(item?.id || '').trim();
+        const prev = existingById.get(id);
+        if (!prev) return item;
+        return recordTimestamp(item) >= recordTimestamp(prev) ? item : prev;
+      });
+    }
+
+    if (incoming.length < existing.length) {
+      return mergeArrayUnion(incoming, existing);
+    }
+
+    return mergeArrayUnion(incoming, existing);
   }
 
   function withTimeout(promise, ms, label) {
@@ -200,7 +232,7 @@ window.StudioStorage = (function () {
       return;
     }
 
-    const nextValue = mergeIncomingCollection(key, value);
+    const nextValue = reconcileArrayWrite(key, value);
     const nextFp = fingerprint(nextValue);
     cache.set(key, nextValue);
     dataFingerprints.set(key, nextFp);
@@ -212,7 +244,7 @@ window.StudioStorage = (function () {
   function applyPreReadyWrites() {
     if (!preReadyWrites.size) return;
     preReadyWrites.forEach((value, key) => {
-      const merged = mergeIncomingCollection(key, value);
+      const merged = reconcileArrayWrite(key, value);
       const fp = fingerprint(merged);
       if (dataFingerprints.get(key) === fp && cache.has(key)) return;
       cache.set(key, merged);
@@ -280,12 +312,44 @@ window.StudioStorage = (function () {
     if (error) throw new Error(error.message || 'Could not load studio data from cloud.');
 
     (data || []).forEach((row) => {
-      const merged = mergeIncomingCollection(row.collection_key, row.data);
+      const merged = mergeArrayFromRemote(row.collection_key, row.data);
       cache.set(row.collection_key, merged);
       cache.set(`__ver:${row.collection_key}`, row.version || 0);
       dataFingerprints.set(row.collection_key, fingerprint(merged));
       writeLocal(row.collection_key, merged);
     });
+  }
+
+  async function refreshFromCloud() {
+    if (!client || !ready || !isCloudEnabled()) {
+      return { ok: false, reason: 'not-ready' };
+    }
+    const { data, error } = await withTimeout(
+      client
+        .from('studio_collections')
+        .select('collection_key, data, version, updated_at')
+        .eq('workspace_id', workspaceId),
+      FETCH_TIMEOUT_MS,
+      'Cloud refresh',
+    );
+    if (error) throw new Error(error.message || 'Could not refresh studio data from cloud.');
+
+    const touched = [];
+    (data || []).forEach((row) => {
+      const merged = mergeArrayFromRemote(row.collection_key, row.data);
+      const fp = fingerprint(merged);
+      if (dataFingerprints.get(row.collection_key) === fp && cache.has(row.collection_key)) return;
+      cache.set(row.collection_key, merged);
+      cache.set(`__ver:${row.collection_key}`, row.version || 0);
+      dataFingerprints.set(row.collection_key, fp);
+      writeLocal(row.collection_key, merged);
+      scheduleNotify(row.collection_key);
+      touched.push(row.collection_key);
+    });
+    if (touched.length) {
+      window.dispatchEvent(new CustomEvent('studio-storage-remote', { detail: { keys: touched } }));
+    }
+    return { ok: true, collections: (data || []).length, updated: touched.length };
   }
 
   function shouldSuppressEcho(key, version) {
@@ -307,7 +371,7 @@ window.StudioStorage = (function () {
     const localVersion = cache.get(`__ver:${key}`) || 0;
     if (remoteVersion < localVersion) return;
 
-    const merged = mergeIncomingCollection(key, row.data);
+    const merged = mergeArrayFromRemote(key, row.data);
     const fp = fingerprint(merged);
     if (dataFingerprints.get(key) === fp) return;
 
@@ -364,6 +428,11 @@ window.StudioStorage = (function () {
       ready = true;
       applyPreReadyWrites();
       subscribeRealtime();
+      if (!document.hidden) {
+        refreshFromCloud().catch((err) => {
+          console.warn('StudioStorage post-init refresh failed:', err);
+        });
+      }
       return { mode: 'cloud', workspaceId, collections: cache.size };
     })().catch((err) => {
       initError = err.message || String(err);
@@ -400,26 +469,57 @@ window.StudioStorage = (function () {
     return () => listeners.delete(fn);
   }
 
-  /** Push current browser localStorage studio keys to Supabase (one-time migration). */
+  /** Push this device's data to Supabase, union-merged with whatever is already in cloud. */
   async function migrateLocalToCloud() {
     if (!client) throw new Error('Cloud storage not initialized.');
+
+    const { data: cloudRows, error: loadError } = await withTimeout(
+      client
+        .from('studio_collections')
+        .select('collection_key, data, version')
+        .eq('workspace_id', workspaceId),
+      FETCH_TIMEOUT_MS * 2,
+      'Cloud migration load',
+    );
+    if (loadError) throw new Error(loadError.message || 'Could not read cloud data before upload.');
+
+    const cloudByKey = new Map((cloudRows || []).map((row) => [row.collection_key, row]));
+
     const payload = [];
     STUDIO_KEYS.forEach((key) => {
-      const data = readLocal(key, key === 'renova-studio-client-photos' ? {} : []);
-      if (
-        (Array.isArray(data) && data.length === 0)
-        || (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 0)
-      ) return;
-      cache.set(key, data);
-      dataFingerprints.set(key, fingerprint(data));
+      const local = readLocal(key, key === 'renova-studio-client-photos' ? {} : []);
+      const cloudRow = cloudByKey.get(key);
+      const cloudData = cloudRow?.data;
+      let merged = local;
+
+      if (ARRAY_MERGE_KEYS.has(key) && Array.isArray(local) && Array.isArray(cloudData)) {
+        merged = mergeArrayUnion(local, cloudData);
+      } else if (
+        (!Array.isArray(local) || !local.length)
+        && cloudData
+        && (Array.isArray(cloudData) ? cloudData.length : Object.keys(cloudData).length)
+      ) {
+        merged = cloudData;
+      }
+
+      const emptyArray = Array.isArray(merged) && merged.length === 0;
+      const emptyObject = merged && typeof merged === 'object' && !Array.isArray(merged) && !Object.keys(merged).length;
+      if (emptyArray || emptyObject) return;
+
+      const version = Math.max(cloudRow?.version || 0, cache.get(`__ver:${key}`) || 0) + 1;
+      cache.set(key, merged);
+      cache.set(`__ver:${key}`, version);
+      dataFingerprints.set(key, fingerprint(merged));
+      writeLocal(key, merged);
       payload.push({
         workspace_id: workspaceId,
         collection_key: key,
-        data,
-        version: 1,
+        data: merged,
+        version,
         updated_at: new Date().toISOString(),
       });
     });
+
     if (!payload.length) return { migrated: 0 };
     const { error } = await withTimeout(
       client.from('studio_collections').upsert(payload, {
@@ -429,7 +529,17 @@ window.StudioStorage = (function () {
       'Cloud migration',
     );
     if (error) throw new Error(error.message || 'Migration failed.');
+    payload.forEach((row) => scheduleNotify(row.collection_key));
     return { migrated: payload.length };
+  }
+
+  function getCollectionCounts() {
+    const clients = getExistingCollection('renova-studio-clients', []);
+    const appointments = getExistingCollection('renova-studio-appointments', []);
+    return {
+      clients: Array.isArray(clients) ? clients.length : 0,
+      appointments: Array.isArray(appointments) ? appointments.length : 0,
+    };
   }
 
   function exportLocalSnapshot() {
@@ -440,11 +550,31 @@ window.StudioStorage = (function () {
     return out;
   }
 
+  let refreshInFlight = null;
+
+  function scheduleCloudRefresh() {
+    if (!ready || !client || document.hidden) return;
+    if (refreshInFlight) return;
+    refreshInFlight = refreshFromCloud()
+      .catch((err) => {
+        console.warn('StudioStorage visibility refresh failed:', err);
+      })
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => { init(); });
   } else {
     init();
   }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') scheduleCloudRefresh();
+  });
+
+  window.addEventListener('focus', scheduleCloudRefresh);
 
   window.addEventListener('beforeunload', () => {
     flushAll();
@@ -463,6 +593,8 @@ window.StudioStorage = (function () {
     flushAll,
     onChange,
     migrateLocalToCloud,
+    refreshFromCloud,
+    getCollectionCounts,
     exportLocalSnapshot,
   };
 })();

@@ -28,9 +28,11 @@
   const SPLIT_CENTER = 0.5;
   const SPLIT_MAX = 0.7;
   const SPLIT_MIN = 0.3;
-  const FOLLOW_IN = 9;
-  const FOLLOW_OUT = 5.5;
-  const POINTER_SMOOTH = 14;
+  const FOLLOW_IN = 10.5;
+  const FOLLOW_OUT = 6.5;
+  const POINTER_SMOOTH = 12;
+  const NAV_EXPAND_MS = 760;
+  const NAV_FADE_MS = 900;
 
   let split = SPLIT_CENTER;
   let targetSplit = SPLIT_CENTER;
@@ -311,17 +313,79 @@
     return dy < 0 ? 'hair' : 'peptides';
   }
 
+  function prefetchRoute(url) {
+    if (!url || document.querySelector(`link[rel="prefetch"][href="${url}"]`)) return;
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.as = 'document';
+    link.href = url;
+    document.head.appendChild(link);
+  }
+
+  function commitNavigation(side) {
+    const url = ROUTES[side];
+    if (!url) return;
+    try {
+      sessionStorage.setItem('onyx-gateway-enter', side);
+    } catch (_) { /* private mode */ }
+    const go = () => {
+      window.location.href = url;
+    };
+    if (typeof document.startViewTransition === 'function') {
+      document.startViewTransition(go);
+      return;
+    }
+    go();
+  }
+
   function navigateToSide(side) {
     if (navigating || !ROUTES[side]) return;
     navigating = true;
+
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+      lastTime = 0;
+    }
+
+    prefetchRoute(ROUTES[side]);
+
     gateway.classList.add('is-navigating', `is-navigating-${side}`);
-    isInside = true;
-    pointerRatio = side === 'peptides' ? 0 : 1;
-    targetSplit = splitFromRatio(pointerRatio);
-    queueTick();
+    document.body.classList.add('gateway-opening', `gateway-opening-${side}`);
+    gateway.classList.remove('is-tracking', 'is-swiping');
+    isInside = false;
+
+    gateway.style.setProperty('--p-focus', side === 'peptides' ? '1' : '0');
+    gateway.style.setProperty('--h-focus', side === 'hair' ? '1' : '0');
+    gateway.style.setProperty('--focus', '1');
+
+    if (hero) hero.style.opacity = '0';
+    if (splitLine) splitLine.style.opacity = '0';
+    if (divider) {
+      divider.style.opacity = '0';
+      divider.style.transform = 'translate(-50%, -50%) scale(0.5)';
+    }
+
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      commitNavigation(side);
+    };
+
+    const onGridSettled = (e) => {
+      if (e.target !== gateway) return;
+      if (!e.propertyName.includes('grid')) return;
+      gateway.removeEventListener('transitionend', onGridSettled);
+      window.setTimeout(finish, 140);
+    };
+
+    gateway.addEventListener('transitionend', onGridSettled);
+    window.setTimeout(finish, NAV_FADE_MS);
     window.setTimeout(() => {
-      window.location.href = ROUTES[side];
-    }, 460);
+      gateway.classList.add('is-navigating-ready');
+      document.body.classList.add('gateway-opening-ready');
+    }, NAV_EXPAND_MS * 0.5);
   }
 
   function resolveSideFromSwipe(dx, dy, dragged = false) {
@@ -343,11 +407,16 @@
 
   [peptidesPanel, hairPanel].forEach((panel) => {
     if (!panel) return;
+    const side = panel.dataset.side;
+    panel.addEventListener('mouseenter', () => prefetchRoute(ROUTES[side]));
+    panel.addEventListener('focus', () => prefetchRoute(ROUTES[side]));
     panel.addEventListener('click', (e) => {
-      if (!isTouchUI()) return;
+      if (navigating || suppressPanelClick) {
+        e.preventDefault();
+        return;
+      }
       e.preventDefault();
-      if (suppressPanelClick) return;
-      navigateToSide(panel.dataset.side);
+      navigateToSide(side);
     });
   });
 

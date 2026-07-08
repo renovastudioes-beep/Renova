@@ -2354,6 +2354,63 @@ window.RenvoaStudioUI = (function () {
     return { grossSubtotal, discount, netSubtotal, creditApplied, dueTotal, shouldApply };
   }
 
+  function renderCashRegisterModal(ctx) {
+    if (!ctx.studioCashRegisterOpen) return '';
+    const due = ctx.studioCashRegisterDue || 0;
+    const tenderRaw = ctx.studioCashTenderInput || '';
+    const tender = parseFloat(tenderRaw) || 0;
+    const change = Math.max(0, Math.round((tender - due) * 100) / 100);
+    const canComplete = due <= 0.005 || tender >= due - 0.005;
+    const tenderDisplay = tenderRaw
+      ? S().formatPrice(tender)
+      : '$0.00';
+    const numpadKeys = ['7', '8', '9', '4', '5', '6', '1', '2', '3', 'C', '0', '.'];
+
+    return `
+      <div class="studio-cash-register-modal" id="studioCashRegisterModal" role="dialog" aria-modal="true" aria-labelledby="cashRegisterTitle">
+        <button type="button" class="studio-cash-register-backdrop" data-cash-register-close aria-label="Close cash register"></button>
+        <div class="studio-cash-register">
+          <div class="studio-cash-register-top">
+            <p class="studio-cash-register-brand">Cash Register</p>
+            <button type="button" class="studio-cash-register-close" data-cash-register-close aria-label="Close">×</button>
+          </div>
+          <p id="cashRegisterTitle" class="studio-cash-register-eyebrow">Enter cash received</p>
+          <div class="studio-cash-register-display" aria-live="polite">
+            <div class="studio-cash-lcd-row">
+              <span class="studio-cash-lcd-label">Total due</span>
+              <span class="studio-cash-lcd-value">${S().formatPrice(due)}</span>
+            </div>
+            <div class="studio-cash-lcd-row studio-cash-lcd-tender">
+              <span class="studio-cash-lcd-label">Amount tendered</span>
+              <span class="studio-cash-lcd-value studio-cash-lcd-input">${esc(tenderDisplay)}</span>
+            </div>
+            <div class="studio-cash-lcd-row studio-cash-lcd-change${canComplete && tender > 0 ? ' is-ready' : ''}">
+              <span class="studio-cash-lcd-label">Change due</span>
+              <span class="studio-cash-lcd-value">${S().formatPrice(change)}</span>
+            </div>
+          </div>
+          <div class="studio-cash-quick-row">
+            <button type="button" class="studio-cash-quick-btn" data-cash-quick="5">$5</button>
+            <button type="button" class="studio-cash-quick-btn" data-cash-quick="10">$10</button>
+            <button type="button" class="studio-cash-quick-btn" data-cash-quick="20">$20</button>
+            <button type="button" class="studio-cash-quick-btn" data-cash-quick="50">$50</button>
+            <button type="button" class="studio-cash-quick-btn" data-cash-quick="100">$100</button>
+            <button type="button" class="studio-cash-quick-btn studio-cash-quick-exact" id="posCashExactBtn">Exact</button>
+          </div>
+          <div class="studio-cash-numpad">
+            ${numpadKeys.map((key) => `
+              <button type="button" class="studio-cash-numpad-key${key === 'C' ? ' is-clear' : ''}" data-cash-key="${key}">${key === 'C' ? 'CLR' : key}</button>`).join('')}
+          </div>
+          <div class="studio-cash-register-actions">
+            <button type="button" class="studio-cash-register-cancel" data-cash-register-close>Cancel</button>
+            <button type="button" class="studio-cash-register-complete" id="posCashRegisterComplete"${canComplete ? '' : ' disabled'}>
+              ${canComplete ? `Complete · give ${S().formatPrice(change)} change` : 'Enter amount tendered'}
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }
+
   function renderPosAuthModal(ctx) {
     if (!ctx.studioPosAuthOpen) return '';
     const action = ctx.studioPosAuthAction;
@@ -3532,14 +3589,19 @@ window.RenvoaStudioUI = (function () {
       </div>
       <section class="admin-panel studio-pos-panel studio-cloud-panel">
         <h2>Cloud sync</h2>
-        <p class="studio-client-section-lead">Production mode stores clients, appointments, POS sales, and portal data in Supabase so every device sees the same records.</p>
+        <p class="studio-client-section-lead">Production mode stores clients, appointments, POS sales, and portal data in Supabase so every Mac, iPad, and phone sees the same records.</p>
         <dl class="studio-cloud-status">
           <div><dt>Mode</dt><dd id="studioCloudModeLabel">${esc(window.StudioStorage?.getMode?.() || 'local')}</dd></div>
           <div><dt>Workspace</dt><dd>${esc(window.RENVOA_CONFIG?.cloud?.workspaceId || 'onyx')}</dd></div>
+          <div><dt>Clients on this device</dt><dd>${S().getClients().length}</dd></div>
+          <div><dt>Appointments on this device</dt><dd>${S().getAppointments().length}</dd></div>
         </dl>
         ${window.StudioStorage?.isCloudEnabled?.()
-          ? `<p class="admin-fine">Cloud is configured. Use migrate once to upload data from this browser, then use the live site on all studio devices.</p>
-             <button type="button" class="btn-primary btn-sm" id="studioCloudMigrateBtn">Upload this device&apos;s data to cloud</button>`
+          ? `<p class="admin-fine">If counts differ between devices, open this page on the Mac with the most clients and tap <strong>Sync now</strong> or <strong>Merge &amp; upload</strong>. Data is union-merged — nothing is deleted unless you remove it in the portal.</p>
+             <div class="studio-cloud-actions">
+               <button type="button" class="btn-primary btn-sm" id="studioCloudSyncBtn">Sync now</button>
+               <button type="button" class="btn-secondary btn-sm" id="studioCloudMigrateBtn">Merge &amp; upload this device</button>
+             </div>`
           : `<p class="admin-fine">Cloud is off. Set <code>RENVOA_CONFIG.cloud.enabled</code>, Supabase URL, and anon key in <code>js/config.js</code>, then run <code>supabase/schema.sql</code> in your Supabase project.</p>`}
       </section>`;
   }
@@ -3565,7 +3627,7 @@ window.RenvoaStudioUI = (function () {
                   <td><button type="button" class="studio-tx-toggle" data-studio-tx="${t.id}">${expanded === t.id ? '▼' : '▶'}</button></td>
                   <td><strong>${esc(t.clientName)}</strong>${t.walkIn ? ' <span class="studio-tx-walkin-badge">Walk-in</span>' : ''}<small>${t.id}</small></td>
                   <td><strong>${S().formatPrice(t.total)}</strong></td>
-                  <td>${esc(t.paymentMethod)}</td>
+                  <td>${esc(t.paymentMethod)}${t.paymentMethod === 'cash' && t.cashChange ? ` · ${S().formatPrice(t.cashChange)} change` : ''}</td>
                   <td>${new Date(t.at).toLocaleString()}</td>
                 </tr>
                 ${expanded === t.id ? `<tr class="studio-tx-detail"><td colspan="5">
@@ -3574,6 +3636,7 @@ window.RenvoaStudioUI = (function () {
                   ).join('')}</ul>
                   ${t.discount ? `<p class="studio-tx-discount">Discount: −${S().formatPrice(t.discount)}</p>` : ''}
                   ${t.creditApplied ? `<p class="studio-tx-discount">Studio credit: −${S().formatPrice(t.creditApplied)}</p>` : ''}
+                  ${t.paymentMethod === 'cash' && t.cashTendered ? `<p class="studio-tx-cash">Cash tendered: ${S().formatPrice(t.cashTendered)} · Change: ${S().formatPrice(t.cashChange || 0)}</p>` : ''}
                   ${t.notes ? `<p class="admin-fine">${esc(t.notes)}</p>` : ''}
                 </td></tr>` : ''}`).join('') || '<tr><td colspan="5" class="admin-empty-cell">No transactions yet.</td></tr>'}
             </tbody>
@@ -3653,8 +3716,8 @@ window.RenvoaStudioUI = (function () {
       settings: renderSettings,
     };
     const body = (views[subView] || renderDashboard)(fullCtx);
-    return `<div class="studio-pos-root">${body}${renderPosAuthModal(fullCtx)}${renderInactiveProgramModal(fullCtx)}${renderPhotoPromptModal(fullCtx)}${renderFinanceOverlay(fullCtx)}${renderIntakeWizardModal(fullCtx)}${renderAllergyModal(fullCtx)}${renderProviderWizardModal(fullCtx)}</div>`;
+    return `<div class="studio-pos-root">${body}${renderCashRegisterModal(fullCtx)}${renderPosAuthModal(fullCtx)}${renderInactiveProgramModal(fullCtx)}${renderPhotoPromptModal(fullCtx)}${renderFinanceOverlay(fullCtx)}${renderIntakeWizardModal(fullCtx)}${renderAllergyModal(fullCtx)}${renderProviderWizardModal(fullCtx)}</div>`;
   }
 
-  return { render, esc, getPostVisitFlowMeta };
+  return { render, esc, getPostVisitFlowMeta, calcPosTotals };
 })();
