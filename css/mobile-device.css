@@ -183,6 +183,11 @@ body {
 
   .admin-main.admin-main-clinic {
     padding: 12px 14px calc(24px + var(--safe-bottom));
+    overflow-x: clip;
+  }
+
+  .admin-shell {
+    min-height: 0;
   }
 
   /* Clinic clients — master/detail on phone & tablet */
@@ -206,17 +211,31 @@ body {
     border-radius: var(--radius-lg);
     border: 1px solid var(--apple-gray-2);
     background: var(--apple-white);
+  }
+
+  .studio-client-layout.is-mobile[data-mobile-pane="list"] .studio-client-list-panel {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - 148px - var(--safe-top) - var(--safe-bottom));
+    min-height: 0;
     overflow: hidden;
   }
 
+  .studio-client-layout.is-mobile .studio-client-detail {
+    max-height: calc(100dvh - 120px - var(--safe-top) - var(--safe-bottom));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
   .studio-client-layout.is-mobile .studio-client-list-head {
-    position: sticky;
-    top: 0;
-    z-index: 4;
+    position: relative;
+    flex-shrink: 0;
+    z-index: 1;
     margin: 0;
     padding: 14px 16px;
-    background: rgba(255, 255, 255, 0.94);
-    backdrop-filter: saturate(180%) blur(12px);
+    background: var(--apple-white);
     border-bottom: 1px solid var(--apple-gray-2);
   }
 
@@ -246,12 +265,11 @@ body {
   }
 
   .studio-client-search-wrap {
-    position: sticky;
-    top: 57px;
-    z-index: 3;
+    position: relative;
+    flex-shrink: 0;
+    z-index: 1;
     padding: 10px 16px 12px;
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: saturate(180%) blur(12px);
+    background: var(--apple-white);
     border-bottom: 1px solid var(--apple-gray-2);
   }
 
@@ -265,9 +283,15 @@ body {
   }
 
   .studio-client-layout.is-mobile .studio-client-order-list {
+    flex: 1 1 auto;
+    min-height: 0;
     max-height: none;
-    overflow: visible;
-    padding: 8px 12px 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    overflow-anchor: none;
+    touch-action: pan-y;
+    padding: 8px 12px calc(16px + var(--safe-bottom));
     gap: 10px;
   }
 
@@ -344,9 +368,8 @@ body {
     margin: 0 -4px 14px;
     padding-left: 4px;
     padding-right: 4px;
-    position: sticky;
-    top: 0;
-    z-index: 2;
+    position: relative;
+    z-index: 1;
     background: var(--apple-white);
   }
 
@@ -475,6 +498,30 @@ body {
     width: 100%;
     max-width: 280px;
     margin: 0 auto;
+  }
+}
+
+/* ——— Landscape phones & short viewports ——— */
+@media (max-width: 834px) and (max-height: 520px),
+       (max-width: 834px) and (orientation: landscape) {
+  .admin-main.admin-main-clinic {
+    padding-bottom: 12px;
+  }
+
+  .studio-client-layout.is-mobile[data-mobile-pane="list"] .studio-client-list-panel {
+    max-height: calc(100dvh - 108px - var(--safe-top) - var(--safe-bottom));
+  }
+
+  .studio-client-layout.is-mobile .studio-client-detail {
+    max-height: calc(100dvh - 96px - var(--safe-top) - var(--safe-bottom));
+  }
+
+  .studio-client-layout.is-mobile .studio-client-list-head {
+    padding: 10px 14px;
+  }
+
+  .studio-client-search-wrap {
+    padding: 8px 14px 10px;
   }
 }
 

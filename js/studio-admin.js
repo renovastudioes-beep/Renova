@@ -2406,13 +2406,13 @@ window.RenvoaStudios = (function () {
     if (!appt) return false;
     const VF = window.StudioVisitFlow;
     if (!VF) return false;
-    const forms = VF.getPortalIntakeForms?.() || VF.INTAKE_FORMS || [];
+    const forms = VF.getPortalIntakeForms?.(appt) || VF.INTAKE_FORMS || [];
     const signed = appt.intakeForms || [];
     const data = appt.intakeData || {};
     const skipped = appt.intakeSkippedForms || [];
     return forms.some((f) => {
       if (f.signAtVisit) return false;
-      const ready = VF.portalIntakeFormReady(f, signed, data);
+      const ready = VF.portalIntakeFormReady(f, signed, data, skipped);
       if (skipped.includes(f.id) && !ready) return true;
       return !ready;
     });
@@ -2426,13 +2426,13 @@ window.RenvoaStudios = (function () {
 
   function getIntakeFormStatus(appt) {
     const VF = window.StudioVisitFlow;
-    const portalForms = VF?.getPortalIntakeForms?.() || VF?.INTAKE_FORMS || [];
-    const visitForms = VF?.getVisitSignForms?.() || [];
+    const portalForms = VF?.getPortalIntakeForms?.(appt) || VF?.INTAKE_FORMS || [];
+    const visitForms = VF?.getVisitSignForms?.(appt) || [];
     const signed = appt?.intakeForms || [];
     const skipped = appt?.intakeSkippedForms || [];
     const data = appt?.intakeData || {};
     const portalItems = portalForms.map((form, index) => {
-      const ready = !!(VF && VF.portalIntakeFormReady(form, signed, data));
+      const ready = !!(VF && VF.portalIntakeFormReady(form, signed, data, skipped));
       let status = 'pending';
       if (ready) status = 'complete';
       else if (skipped.includes(form.id)) status = 'skipped';
@@ -2459,7 +2459,7 @@ window.RenvoaStudios = (function () {
       required: !!form.required,
       signed: signed.includes(form.id),
       skipped: skipped.includes(form.id),
-      ready: !!(VF && VF.intakeFormReady(form, signed, data)),
+      ready: !!(VF && VF.intakeFormReady(form, signed, data, skipped)),
       status: 'at_visit',
       signAtVisit: true,
       portal: false,
@@ -2499,16 +2499,16 @@ window.RenvoaStudios = (function () {
   function isPortalIntakeComplete(appt) {
     const VF = window.StudioVisitFlow;
     if (!appt || !VF) return false;
-    const forms = VF.getPortalIntakeForms?.() || [];
+    const forms = VF.getPortalIntakeForms?.(appt) || [];
     const signed = appt.intakeForms || [];
     const data = appt.intakeData || {};
     const skipped = appt.intakeSkippedForms || [];
     const requiredReady = forms
       .filter((f) => f.required)
-      .every((f) => VF.portalIntakeFormReady(f, signed, data));
+      .every((f) => VF.portalIntakeFormReady(f, signed, data, skipped));
     const skippedResolved = skipped.every((id) => {
       const form = forms.find((f) => f.id === id);
-      return !form || VF.portalIntakeFormReady(form, signed, data);
+      return !form || VF.portalIntakeFormReady(form, signed, data, skipped);
     });
     return requiredReady && skippedResolved;
   }
@@ -2517,12 +2517,13 @@ window.RenvoaStudios = (function () {
     const VF = window.StudioVisitFlow;
     if (!appt || !VF) return false;
     if (appt.intakeSkipped) return true;
-    const forms = VF.INTAKE_FORMS || [];
+    const forms = VF.getIntakeFormsForAppointment?.(appt) || VF.INTAKE_FORMS || [];
     const signed = appt.intakeForms || [];
     const data = appt.intakeData || {};
+    const skipped = appt.intakeSkippedForms || [];
     return forms
       .filter((f) => f.required)
-      .every((f) => VF.intakeFormReady(f, signed, data));
+      .every((f) => VF.intakeFormReady(f, signed, data, skipped));
   }
 
   function getClientPendingIntakeAppointments(clientId, phone) {
@@ -2554,9 +2555,10 @@ window.RenvoaStudios = (function () {
       intakeSkippedForms,
     };
     const complete = patch.intakeCompleted != null ? patch.intakeCompleted : isPortalIntakeComplete(merged);
+    const portalForms = window.StudioVisitFlow?.getPortalIntakeForms?.(merged) || [];
     const skippedRemaining = intakeSkippedForms.filter((id) => {
-      const form = (window.StudioVisitFlow?.getPortalIntakeForms?.() || []).find((f) => f.id === id);
-      return form && !window.StudioVisitFlow.portalIntakeFormReady(form, intakeForms, intakeData);
+      const form = portalForms.find((f) => f.id === id);
+      return form && !window.StudioVisitFlow.portalIntakeFormReady(form, intakeForms, intakeData, intakeSkippedForms);
     });
     const updated = updateAppointment(apptId, {
       intakeData,

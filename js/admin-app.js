@@ -455,6 +455,9 @@
     studioFlash = '';
     updateBusinessModeUI();
     renderView();
+    if (subView === 'clients') {
+      setTimeout(() => maybeSyncClientsTab(), 300);
+    }
   }
 
   function captureInputFocus() {
@@ -540,6 +543,61 @@
   let renderViewDebounce = null;
   let clientsTabSyncInFlight = null;
   let lastClientsTabSyncAt = 0;
+  let userInteractingUntil = 0;
+  let storageRefreshTimer = null;
+
+  function markUserInteracting(ms = 500) {
+    userInteractingUntil = Date.now() + ms;
+  }
+
+  function isUserInteracting() {
+    return Date.now() < userInteractingUntil;
+  }
+
+  function captureViewScroll() {
+    if (!mainEl || businessMode !== 'clinic' || studioSubView !== 'clients') return null;
+    const list = mainEl.querySelector('.studio-client-order-list');
+    return {
+      listScrollTop: list?.scrollTop || 0,
+      windowScrollY: window.scrollY || 0,
+    };
+  }
+
+  function restoreViewScroll(state) {
+    if (!state || !mainEl) return;
+    requestAnimationFrame(() => {
+      const list = mainEl.querySelector('.studio-client-order-list');
+      if (list) list.scrollTop = state.listScrollTop || 0;
+      if (state.windowScrollY > 0) {
+        window.scrollTo({ top: state.windowScrollY, behavior: 'auto' });
+      }
+    });
+  }
+
+  function updateIntakeWizardButtons() {
+    const VF = window.StudioVisitFlow;
+    const forms = getActiveIntakeForms();
+    const form = forms[studioIntakeStep];
+    if (!form) return;
+    const canAdvance = studioIntakeSkippedForms.includes(form.id)
+      || !!VF?.intakeFormReady(form, studioIntakeSigned, studioIntakeData, studioIntakeSkippedForms);
+    const nextBtn = document.getElementById('intakeWizardNext');
+    const finishBtn = document.getElementById('intakeWizardFinish');
+    if (nextBtn) nextBtn.disabled = !canAdvance;
+    if (finishBtn) finishBtn.disabled = !canAdvance;
+  }
+
+  function scheduleStorageRefresh() {
+    if (!A?.isAuthed() || businessMode !== 'clinic') return;
+    if (isUserInteracting()) return;
+    if (studioIntakeWizardOpen || studioProviderWizardOpen || studioPosAuthOpen) return;
+    if (storageRefreshTimer) clearTimeout(storageRefreshTimer);
+    storageRefreshTimer = setTimeout(() => {
+      storageRefreshTimer = null;
+      if (isUserInteracting()) return;
+      scheduleRenderView(0);
+    }, 1500);
+  }
 
   function scheduleRenderView(ms = 0) {
     if (renderViewDebounce) clearTimeout(renderViewDebounce);
@@ -624,13 +682,17 @@
     const storage = window.StudioStorage;
     if (!storage?.syncNow || storage.getMode?.() !== 'cloud') return;
     const now = Date.now();
-    if (now - lastClientsTabSyncAt < 12000) return;
-    if (clientsTabSyncInFlight) return;
+    if (now - lastClientsTabSyncAt < 30000) return;
+    if (clientsTabSyncInFlight || isUserInteracting()) return;
     lastClientsTabSyncAt = now;
+    const scrollState = captureViewScroll();
     clientsTabSyncInFlight = storage.syncNow()
       .then(() => {
         updateAppMeta();
-        renderView();
+        if (!isUserInteracting()) {
+          renderView();
+          restoreViewScroll(scrollState);
+        }
       })
       .catch((err) => {
         console.warn('Clients tab cloud sync failed:', err);
@@ -658,6 +720,7 @@
     if (!A) return;
     syncStudioClientSelection();
     const focusState = captureInputFocus();
+    const scrollState = captureViewScroll();
     const views = {
       overview: renderOverview,
       pos: renderPOS,
@@ -678,13 +741,13 @@
     updateNavActiveState();
     window.StudioApptTimers?.syncForCalendarView(businessMode === 'clinic' && studioSubView === 'calendar');
     restoreInputFocus(focusState);
+    restoreViewScroll(scrollState);
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => syncAdminViewScroll());
+      syncAdminViewScroll();
     });
     if (businessMode === 'clinic' && studioFinanceOpen) {
       requestAnimationFrame(() => initStudioFinanceEmbed());
     }
-    maybeSyncClientsTab();
     } catch (err) {
       console.error('RENVOA admin view error:', err);
       mainEl.innerHTML = `<div class="admin-panel"><h2>Could not load this section</h2><p>${esc(err.message)}</p><button type="button" class="btn-primary btn-sm" id="adminRetryBtn">Retry</button></div>`;
@@ -1996,6 +2059,13 @@
     });
   }
 
+  function getActiveIntakeForms() {
+    const VF = window.StudioVisitFlow;
+    const S = window.RenvoaStudios;
+    const appt = S?.getAppointment(studioIntakeApptId);
+    return VF?.getIntakeFormsForAppointment?.(appt) || VF?.INTAKE_FORMS || [];
+  }
+
   function persistIntakeDraft() {
     const S = window.RenvoaStudios;
     if (!S || !studioIntakeApptId) return;
@@ -2006,9 +2076,36 @@
     });
   }
 
+  function bindIntakeSignaturePads() {
+    const VF = window.StudioVisitFlow;
+    const root = document.getElementById('studioIntakeModal');
+    if (!VF?.initSignaturePads || !root) return;
+    VF.initSignaturePads(root, {
+      onSignatureChange: (formId, dataUrl) => {
+        studioIntakeData = {
+          ...studioIntakeData,
+          [formId]: {
+            ...(studioIntakeData[formId] || {}),
+            __signature: dataUrl
+              ? { dataUrl, signedAt: new Date().toISOString() }
+              : undefined,
+          },
+        };
+        if (dataUrl) {
+          if (!studioIntakeSigned.includes(formId)) studioIntakeSigned.push(formId);
+          studioIntakeSkippedForms = studioIntakeSkippedForms.filter((id) => id !== formId);
+        } else {
+          studioIntakeSigned = studioIntakeSigned.filter((id) => id !== formId);
+        }
+        persistIntakeDraft();
+        updateIntakeWizardButtons();
+      },
+    });
+  }
+
   function skipCurrentIntakeForm() {
     const VF = window.StudioVisitFlow;
-    const forms = VF?.INTAKE_FORMS || [];
+    const forms = getActiveIntakeForms();
     const form = forms[studioIntakeStep];
     if (!form) return;
     if (!studioIntakeSkippedForms.includes(form.id)) {
@@ -2249,10 +2346,10 @@
     const S = window.RenvoaStudios;
     const VF = window.StudioVisitFlow;
     if (!S || !studioIntakeApptId) return;
-    const forms = VF?.INTAKE_FORMS || [];
+    const forms = getActiveIntakeForms();
     const current = forms[studioIntakeStep];
     if (!opts.fromSkip && current && !studioIntakeSkippedForms.includes(current.id)
-      && !VF.intakeFormReady(current, studioIntakeSigned, studioIntakeData)) {
+      && !VF.intakeFormReady(current, studioIntakeSigned, studioIntakeData, studioIntakeSkippedForms)) {
       studioNotify(current.required
         ? 'Complete all fields and have the client sign, or skip this form.'
         : 'Client must sign this form to continue, or skip it.', 'error');
@@ -3936,15 +4033,7 @@
       });
     });
 
-    $('#intakeFormSigned')?.addEventListener('change', (e) => {
-      const formId = e.target.dataset.intakeSign;
-      if (e.target.checked) {
-        if (!studioIntakeSigned.includes(formId)) studioIntakeSigned.push(formId);
-      } else {
-        studioIntakeSigned = studioIntakeSigned.filter((id) => id !== formId);
-      }
-      renderView();
-    });
+    bindIntakeSignaturePads();
 
     $$('.intake-field-input').forEach((input) => {
       const syncField = () => {
@@ -3996,12 +4085,13 @@
 
     $('#intakeWizardNext')?.addEventListener('click', () => {
       const VF = window.StudioVisitFlow;
-      const forms = VF?.INTAKE_FORMS || [];
+      const forms = getActiveIntakeForms();
       const form = forms[studioIntakeStep];
-      if (!window.StudioVisitFlow?.intakeFormReady(form, studioIntakeSigned, studioIntakeData)) {
+      const isSkipped = form && studioIntakeSkippedForms.includes(form.id);
+      if (!isSkipped && !VF?.intakeFormReady(form, studioIntakeSigned, studioIntakeData, studioIntakeSkippedForms)) {
         studioNotify(form?.required
-          ? 'Complete all fields and have the client sign, or skip this form.'
-          : 'Client must sign this form to continue, or skip it.', 'error');
+          ? 'Complete all fields, have the client sign with their finger, or tap Skip this form.'
+          : 'Have the client sign with their finger to continue, or skip this form.', 'error');
         renderView();
         return;
       }
@@ -4022,14 +4112,14 @@
     });
 
     $('#intakeWizardSkipAll')?.addEventListener('click', () => {
-      const VF = window.StudioVisitFlow;
-      const forms = VF?.INTAKE_FORMS || [];
+      const forms = getActiveIntakeForms();
       forms.forEach((f) => {
-        if (!studioIntakeSkippedForms.includes(f.id) && !studioIntakeSigned.includes(f.id)) {
+        if (!studioIntakeSkippedForms.includes(f.id)) {
           studioIntakeSkippedForms.push(f.id);
         }
       });
-      studioIntakeSigned = [];
+      studioIntakeSigned = studioIntakeSigned.filter((id) => !studioIntakeSkippedForms.includes(id));
+      persistIntakeDraft();
       finishIntakeWizard({ fromSkip: true });
       renderView();
     });
@@ -4336,7 +4426,8 @@
 
     $('#clientSearch')?.addEventListener('input', (e) => {
       studioClientSearch = e.target.value;
-      scheduleRenderView(180);
+      markUserInteracting(800);
+      scheduleRenderView(320);
     });
 
     $('#addClientBtn')?.addEventListener('click', () => {
@@ -5958,6 +6049,16 @@
     markPortalReady();
     window.StudioCalendar?.init();
 
+    if (mainEl && !mainEl.dataset.interactionBound) {
+      mainEl.dataset.interactionBound = '1';
+      mainEl.addEventListener('touchstart', () => markUserInteracting(700), { passive: true });
+      mainEl.addEventListener('touchmove', () => markUserInteracting(900), { passive: true });
+      mainEl.addEventListener('scroll', (e) => {
+        if (e.target.closest?.('.studio-client-order-list')) markUserInteracting(1200);
+        else markUserInteracting(600);
+      }, { passive: true, capture: true });
+    }
+
     mainEl?.addEventListener('click', (e) => {
       const card = e.target.closest('[data-studio-client]');
       if (!card || !mainEl.contains(card)) return;
@@ -6004,11 +6105,11 @@
     });
 
     window.StudioStorage?.onChange?.(() => {
-      if (A?.isAuthed() && businessMode === 'clinic') scheduleRenderView(450);
+      scheduleStorageRefresh();
     });
 
     window.addEventListener('studio-storage-remote', () => {
-      if (A?.isAuthed() && businessMode === 'clinic') scheduleRenderView(450);
+      scheduleStorageRefresh();
     });
 
     if (A?.isAuthed()) {

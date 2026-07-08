@@ -1465,7 +1465,7 @@ window.RenvoaStudioUI = (function () {
     const appt = S().getAppointment(ctx.studioIntakeApptId);
     if (!appt) return '';
     const VF = window.StudioVisitFlow;
-    const forms = VF?.INTAKE_FORMS || [];
+    const forms = VF?.getIntakeFormsForAppointment?.(appt) || VF?.INTAKE_FORMS || [];
     const step = ctx.studioIntakeStep || 0;
     const signed = ctx.studioIntakeSigned || appt.intakeForms || [];
     const skippedForms = ctx.studioIntakeSkippedForms || appt.intakeSkippedForms || [];
@@ -1476,7 +1476,8 @@ window.RenvoaStudioUI = (function () {
     const progressPct = ((stepIdx + 1) / forms.length) * 100;
     const isSigned = signed.includes(form.id);
     const isSkipped = skippedForms.includes(form.id);
-    const formReady = VF?.intakeFormReady(form, signed, intakeData);
+    const formReady = VF?.intakeFormReady(form, signed, intakeData, skippedForms);
+    const canAdvance = isSkipped || formReady;
     const client = appt.clientId ? S().getClient(appt.clientId) : null;
     const clientEmail = client?.email || appt.clientEmail || '';
 
@@ -1505,22 +1506,20 @@ window.RenvoaStudioUI = (function () {
               <div class="studio-intake-fields">
                 ${VF.normalizeFormFields(form).map((f) => renderIntakeField(form, f, intakeData)).join('')}
               </div>
-              <label class="studio-intake-sign">
-                <input type="checkbox" id="intakeFormSigned" data-intake-sign="${form.id}" ${isSigned ? 'checked' : ''}>
-                <span>Client reviewed and signed${form.required ? ' (required)' : ''}</span>
-              </label>
+              ${VF.renderSignaturePadHtml?.(form.id, intakeData[form.id] || {}, esc) || ''}
+              ${isSkipped ? '<p class="studio-intake-skipped-note">This form was skipped — tap Continue or fill it out and sign to complete it now.</p>' : ''}
             </article>
           </div>
           <div class="studio-glass-wizard-footer studio-intake-wizard-footer">
             <div class="studio-intake-wizard-footer-main">
               ${stepIdx > 0 ? '<button type="button" class="studio-glass-btn studio-glass-btn-secondary" id="intakeWizardBack">Back</button>' : '<span></span>'}
               ${stepIdx < forms.length - 1
-                ? `<button type="button" class="studio-glass-btn studio-glass-btn-primary" id="intakeWizardNext"${!formReady ? ' disabled' : ''}>Continue</button>`
-                : `<button type="button" class="studio-glass-btn studio-glass-btn-primary" id="intakeWizardFinish"${!formReady ? ' disabled' : ''}>Complete intake</button>`}
+                ? `<button type="button" class="studio-glass-btn studio-glass-btn-primary" id="intakeWizardNext"${!canAdvance ? ' disabled' : ''}>Continue</button>`
+                : `<button type="button" class="studio-glass-btn studio-glass-btn-primary" id="intakeWizardFinish"${!canAdvance ? ' disabled' : ''}>Complete intake</button>`}
             </div>
             <div class="studio-intake-wizard-skip-row">
-              <button type="button" class="studio-glass-btn studio-glass-btn-secondary studio-intake-skip-btn" id="intakeWizardSkip">Skip this form</button>
-              <button type="button" class="studio-glass-btn studio-intake-skip-all-btn" id="intakeWizardSkipAll">Skip all &amp; continue</button>
+              <button type="button" class="studio-glass-btn studio-glass-btn-secondary studio-intake-skip-btn" id="intakeWizardSkip"${isSkipped ? ' disabled' : ''}>Skip this form</button>
+              <button type="button" class="studio-glass-btn studio-intake-skip-all-btn" id="intakeWizardSkipAll">Skip all remaining</button>
             </div>
           </div>
         </div>

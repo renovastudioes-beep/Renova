@@ -11,11 +11,17 @@ window.StudioVisitFlow = (function () {
   const INTAKE_POLICIES = {
     cancellation: { label: 'Cancellation & reschedule policy', url: `${STUDIO_POLICIES_PATH}#cancellation` },
     treatment_consent: { label: 'Treatment consent & service agreement', url: `${STUDIO_POLICIES_PATH}#treatment-consent` },
+    color_consent: { label: 'Color & chemical service consent', url: `${STUDIO_POLICIES_PATH}#color-consent` },
     studio_privacy: { label: 'Studio privacy & data use', url: `${STUDIO_POLICIES_PATH}#privacy` },
     photo_release: { label: 'Photography & image release', url: `${STUDIO_POLICIES_PATH}#photo-release` },
     privacy: { label: 'Privacy policy', url: 'legal/privacy.html' },
     terms: { label: 'Terms of service', url: 'legal/terms.html' },
   };
+
+  const COLOR_SERVICE_PATTERN = /color|bleach|lighten|highlight|balayage|toner|gloss|grey|gray.?blend|root.?touch|single.?process|foil|dimension|keratin|smoothing|relaxer|perm|vivid|fashion/i;
+  const COLOR_ACTIVITY_IDS = new Set([
+    'color', 'fullcolor', 'highlights', 'root', 'grey', 'gloss', 'keratin',
+  ]);
 
   const INTAKE_FORMS = [
     {
@@ -60,6 +66,32 @@ window.StudioVisitFlow = (function () {
         { id: 'cancellation_policy', label: 'Cancellation & reschedule policy reviewed?', type: 'select', options: ['Yes', 'No'] },
         { id: 'client_initials', label: 'Client initials', type: 'text', required: true, placeholder: 'e.g. J.D.' },
         { id: 'consent_date', label: 'Date of consent', type: 'date', required: true },
+      ],
+    },
+    {
+      id: 'consent_color',
+      label: 'Color & chemical service consent',
+      desc: 'Required before color, bleach, highlights, balayage, toner, grey blending, or chemical smoothing.',
+      required: true,
+      signAtVisit: true,
+      colorServiceOnly: true,
+      policyLinks: ['color_consent', 'treatment_consent'],
+      intro: 'Color and chemical services carry specific risks. Your provider will review patch/strand test results, processing time, and aftercare before you sign.',
+      clauses: [
+        'I understand color results vary based on hair history, porosity, underlying pigment, and prior chemical services.',
+        'I agree to disclose all color, bleach, keratin, relaxer, or smoothing services within the last 12 months.',
+        'I understand an adverse reaction may require stopping the service and seeking medical care if needed.',
+        'I agree to follow patch-test, strand-test, and processing instructions provided by my provider.',
+      ],
+      fields: [
+        { id: 'color_services_today', label: 'Color/chemical services planned today', type: 'textarea', required: true, placeholder: 'e.g. root touch-up, balayage, gloss, grey blend, keratin…' },
+        { id: 'last_color_date', label: 'Last color or chemical service (approx. date)', type: 'text', placeholder: 'e.g. March 2026 — highlights at another salon' },
+        { id: 'patch_test', label: 'Patch or strand test discussed?', type: 'select', required: true, options: ['Yes — completed', 'Yes — scheduled/waived per provider', 'No — need more information'] },
+        { id: 'allergic_history', label: 'History of allergic reaction to hair color or chemicals?', type: 'select', required: true, options: ['No', 'Yes', 'Unsure'] },
+        { id: 'pregnancy_color', label: 'Pregnant or nursing?', type: 'select', required: true, options: ['No', 'Yes', 'Prefer not to say'] },
+        { id: 'color_aftercare', label: 'Aftercare & maintenance plan reviewed?', type: 'select', required: true, options: ['Yes', 'No — need copy'] },
+        { id: 'color_questions', label: 'Outstanding questions before color service', type: 'textarea', placeholder: 'Optional' },
+        { id: 'color_consent_date', label: 'Date of consent', type: 'date', required: true },
       ],
     },
     {
@@ -131,12 +163,169 @@ window.StudioVisitFlow = (function () {
     { id: 'zero_proof', label: 'Zero-proof cocktail' },
   ];
 
-  function getPortalIntakeForms() {
-    return INTAKE_FORMS.filter((f) => !f.signAtVisit);
+  function appointmentInvolvesColorService(appt) {
+    if (!appt) return false;
+    const S = window.RenvoaStudios;
+    const text = [
+      appt.serviceName,
+      appt.intendedService,
+      appt.bookServiceName,
+      appt.notes,
+      appt.providerSession?.activityLabel,
+    ].filter(Boolean).join(' ');
+    if (COLOR_SERVICE_PATTERN.test(text)) return true;
+    const activityId = String(appt.providerSession?.activityId || '').trim();
+    if (activityId && COLOR_ACTIVITY_IDS.has(activityId)) return true;
+    const svc = S?.getService?.(appt.serviceId);
+    if (svc) {
+      const svcText = `${svc.name || ''} ${svc.id || ''} ${svc.category || ''}`;
+      if (COLOR_SERVICE_PATTERN.test(svcText)) return true;
+    }
+    return false;
   }
 
-  function getVisitSignForms() {
-    return INTAKE_FORMS.filter((f) => f.signAtVisit);
+  function getIntakeFormsForAppointment(appt) {
+    const includeColor = appointmentInvolvesColorService(appt);
+    return INTAKE_FORMS.filter((form) => {
+      if (form.colorServiceOnly) return includeColor;
+      return true;
+    });
+  }
+
+  function getPortalIntakeForms(appt) {
+    const forms = appt ? getIntakeFormsForAppointment(appt) : INTAKE_FORMS;
+    return forms.filter((f) => !f.signAtVisit);
+  }
+
+  function getVisitSignForms(appt) {
+    const forms = appt ? getIntakeFormsForAppointment(appt) : INTAKE_FORMS;
+    return forms.filter((f) => f.signAtVisit);
+  }
+
+  function getFormSignature(formData) {
+    return formData?.__signature?.dataUrl || formData?.signature || '';
+  }
+
+  function hasFormSignature(formData) {
+    const sig = getFormSignature(formData);
+    return typeof sig === 'string' && sig.length > 80;
+  }
+
+  function renderSignaturePadHtml(formId, formData, escFn) {
+    const esc = escFn || ((value) => String(value || ''));
+    const sig = getFormSignature(formData || {});
+    return `
+      <div class="studio-signature-block" data-signature-form="${esc(formId)}">
+        <p class="studio-signature-title">Client signature <em class="studio-intake-req">*</em></p>
+        <p class="studio-signature-hint">Sign with a finger or stylus in the box below.</p>
+        <div class="studio-signature-pad${sig ? ' has-signature' : ''}">
+          <canvas class="studio-signature-canvas" data-signature-canvas="${esc(formId)}" aria-label="Sign here"></canvas>
+        </div>
+        <input type="hidden" class="studio-signature-data" data-signature-input="${esc(formId)}" value="${esc(sig)}">
+        <button type="button" class="studio-signature-clear" data-signature-clear="${esc(formId)}">Clear signature</button>
+      </div>`;
+  }
+
+  function initSignaturePads(root, callbacks = {}) {
+    if (!root) return;
+    root.querySelectorAll('[data-signature-canvas]').forEach((canvas) => {
+      const formId = canvas.dataset.signatureCanvas;
+      if (!formId || canvas.dataset.sigBound === '1') return;
+      canvas.dataset.sigBound = '1';
+
+      const ctx = canvas.getContext('2d');
+      let drawing = false;
+      let hasStroke = false;
+
+      function rect() {
+        return canvas.getBoundingClientRect();
+      }
+
+      function resize() {
+        const r = rect();
+        if (!r.width || !r.height) return;
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(r.width * dpr);
+        canvas.height = Math.floor(r.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.strokeStyle = '#1d1d1f';
+        ctx.lineWidth = 2.4;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        const hidden = root.querySelector(`[data-signature-input="${formId}"]`);
+        if (hidden?.value) {
+          const img = new Image();
+          img.onload = () => {
+            ctx.clearRect(0, 0, r.width, r.height);
+            ctx.drawImage(img, 0, 0, r.width, r.height);
+            hasStroke = true;
+          };
+          img.src = hidden.value;
+        }
+      }
+
+      function pointFromEvent(e) {
+        const r = rect();
+        const t = e.touches?.[0] || e.changedTouches?.[0] || e;
+        return { x: t.clientX - r.left, y: t.clientY - r.top };
+      }
+
+      function startStroke(e) {
+        e.preventDefault();
+        drawing = true;
+        const p = pointFromEvent(e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+      }
+
+      function drawStroke(e) {
+        if (!drawing) return;
+        e.preventDefault();
+        const p = pointFromEvent(e);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        hasStroke = true;
+      }
+
+      function endStroke(e) {
+        if (!drawing) return;
+        e?.preventDefault?.();
+        drawing = false;
+        if (!hasStroke) return;
+        const dataUrl = canvas.toDataURL('image/png');
+        const hidden = root.querySelector(`[data-signature-input="${formId}"]`);
+        if (hidden) hidden.value = dataUrl;
+        canvas.closest('.studio-signature-pad')?.classList.add('has-signature');
+        callbacks.onSignatureChange?.(formId, dataUrl);
+      }
+
+      function clearPad() {
+        const r = rect();
+        ctx.clearRect(0, 0, r.width, r.height);
+        hasStroke = false;
+        const hidden = root.querySelector(`[data-signature-input="${formId}"]`);
+        if (hidden) hidden.value = '';
+        canvas.closest('.studio-signature-pad')?.classList.remove('has-signature');
+        callbacks.onSignatureChange?.(formId, '');
+      }
+
+      canvas.addEventListener('mousedown', startStroke);
+      canvas.addEventListener('mousemove', drawStroke);
+      canvas.addEventListener('mouseup', endStroke);
+      canvas.addEventListener('mouseleave', endStroke);
+      canvas.addEventListener('touchstart', startStroke, { passive: false });
+      canvas.addEventListener('touchmove', drawStroke, { passive: false });
+      canvas.addEventListener('touchend', endStroke, { passive: false });
+      canvas.addEventListener('touchcancel', endStroke, { passive: false });
+      root.querySelector(`[data-signature-clear="${formId}"]`)?.addEventListener('click', clearPad);
+
+      resize();
+      if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(() => resize()).observe(canvas);
+      } else {
+        window.addEventListener('resize', resize);
+      }
+    });
   }
 
   function getArrivalBeverages() {
@@ -174,9 +363,9 @@ window.StudioVisitFlow = (function () {
     return lines.join('\n');
   }
 
-  function portalIntakeFormReady(form, signed, data) {
+  function portalIntakeFormReady(form, signed, data, skipped) {
     if (!form || form.signAtVisit) return false;
-    return intakeFormReady(form, signed, data);
+    return intakeFormReady(form, signed, data, skipped);
   }
 
   const PROVIDER_FLOWS = {
@@ -927,10 +1116,13 @@ window.StudioVisitFlow = (function () {
     return !/^(none|n\/a|na|no allergies?|nil|no known allergies?|not applicable|-)$/i.test(text);
   }
 
-  function intakeFormReady(form, signed, data) {
-    if (!form || !(signed || []).includes(form.id)) return false;
-    if (!form.required) return true;
+  function intakeFormReady(form, signed, data, skipped) {
+    if (!form) return false;
+    if ((skipped || []).includes(form.id)) return true;
     const formData = (data || {})[form.id] || {};
+    if (!hasFormSignature(formData)) return false;
+    if (!(signed || []).includes(form.id)) return false;
+    if (!form.required) return true;
     return normalizeFormFields(form)
       .filter((field) => isFieldRequired(form, field))
       .every((field) => getFieldValue(formData, field));
@@ -1059,7 +1251,8 @@ window.StudioVisitFlow = (function () {
     lines.push(formatAllPoliciesPlain(base));
     lines.push('—'.repeat(48));
 
-    INTAKE_FORMS.forEach((form, idx) => {
+    const forms = getIntakeFormsForAppointment(appt);
+    forms.forEach((form, idx) => {
       const formData = intakeData[form.id] || {};
       const status = skipped.includes(form.id) ? 'SKIPPED' : signed.includes(form.id) ? 'SIGNED' : blank ? 'PENDING' : 'IN PROGRESS';
       lines.push('');
@@ -1079,7 +1272,10 @@ window.StudioVisitFlow = (function () {
         const display = value || (blank ? '___________________________' : '—');
         lines.push(`${getFieldLabel(field)}: ${display}`);
       });
-      if (!blank && signed.includes(form.id)) {
+      const sig = getFormSignature(formData);
+      if (!blank && sig) {
+        lines.push('Client signature: Captured electronically');
+      } else if (!blank && signed.includes(form.id)) {
         lines.push('Client signature: Acknowledged in studio');
       } else if (blank) {
         lines.push('Client signature: _________________________  Date: __________');
@@ -1114,7 +1310,7 @@ window.StudioVisitFlow = (function () {
       `<li><a href="${escapeHtml(resolvePolicyUrl(p.url, base))}">${escapeHtml(p.label)}</a></li>`
     ).join('');
 
-    let formsHtml = INTAKE_FORMS.map((form, idx) => {
+    let formsHtml = getIntakeFormsForAppointment(appt).map((form, idx) => {
       const formData = intakeData[form.id] || {};
       const status = skipped.includes(form.id) ? 'Skipped' : signed.includes(form.id) ? 'Signed' : blank ? 'Pending' : 'In progress';
       const statusClass = skipped.includes(form.id) ? 'skipped' : signed.includes(form.id) ? 'signed' : 'pending';
@@ -1141,7 +1337,13 @@ window.StudioVisitFlow = (function () {
           ${formPoliciesHtml ? `<div class="form-policies"><strong>Review policies:</strong>${formPoliciesHtml}</div>` : ''}
           ${clausesHtml ? `<ul class="clauses">${clausesHtml}</ul>` : ''}
           <table>${fieldsHtml}</table>
-          ${blank ? '<p class="sig-line">Client signature: _________________________ &nbsp; Date: __________</p>' : signed.includes(form.id) ? '<p class="sig-line signed">✓ Acknowledged in studio</p>' : ''}
+          ${blank
+            ? '<p class="sig-line">Client signature: _________________________ &nbsp; Date: __________</p>'
+            : getFormSignature(formData)
+              ? '<p class="sig-line signed"><img class="sig-image" src="' + escapeHtml(getFormSignature(formData)) + '" alt="Client signature" style="max-width:240px;max-height:80px;display:block;margin-top:8px;"></p>'
+              : signed.includes(form.id)
+                ? '<p class="sig-line signed">✓ Acknowledged in studio</p>'
+                : ''}
         </section>`;
     }).join('');
 
@@ -1307,8 +1509,14 @@ window.StudioVisitFlow = (function () {
     isFieldRequired,
     intakeFormReady,
     portalIntakeFormReady,
+    appointmentInvolvesColorService,
+    getIntakeFormsForAppointment,
     getPortalIntakeForms,
     getVisitSignForms,
+    getFormSignature,
+    hasFormSignature,
+    renderSignaturePadHtml,
+    initSignaturePads,
     getArrivalBeverages,
     getArrivalBeverageLabel,
     buildClientPreferences,

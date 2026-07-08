@@ -158,6 +158,12 @@
   }
 
   function portalIntakeForms() {
+    const appt = RS()?.getAppointment(state.intakeApptId);
+    if (appt) {
+      return window.StudioVisitFlow?.getPortalIntakeForms?.(appt)
+        || window.StudioVisitFlow?.INTAKE_FORMS
+        || [];
+    }
     return window.StudioVisitFlow?.getPortalIntakeForms?.() || window.StudioVisitFlow?.INTAKE_FORMS || [];
   }
 
@@ -197,6 +203,40 @@
     return data;
   }
 
+  function syncPortalIntakeSignature(form) {
+    const VF = window.StudioVisitFlow;
+    if (!form) return;
+    const hidden = document.querySelector(`[data-signature-input="${form.id}"]`);
+    const dataUrl = hidden?.value || '';
+    const prev = state.intakeData[form.id] || {};
+    state.intakeData = {
+      ...state.intakeData,
+      [form.id]: {
+        ...prev,
+        __signature: dataUrl ? { dataUrl, signedAt: new Date().toISOString() } : undefined,
+      },
+    };
+    if (dataUrl) {
+      if (!state.intakeSigned.includes(form.id)) state.intakeSigned.push(form.id);
+      state.intakeSkipped = state.intakeSkipped.filter((id) => id !== form.id);
+    } else {
+      state.intakeSigned = state.intakeSigned.filter((id) => id !== form.id);
+    }
+  }
+
+  function bindPortalSignaturePads() {
+    const VF = window.StudioVisitFlow;
+    const root = document.getElementById('studioPortalIntakeForm')?.closest('.studio-portal-intake-card')
+      || document.getElementById('studioPortalRoot');
+    if (!VF?.initSignaturePads || !root) return;
+    VF.initSignaturePads(root, {
+      onSignatureChange: (formId) => {
+        const form = portalIntakeForms().find((f) => f.id === formId);
+        syncPortalIntakeSignature(form);
+      },
+    });
+  }
+
   function persistIntakeStep(markComplete) {
     const VF = window.StudioVisitFlow;
     const form = portalFormByStep(state.intakeStep);
@@ -206,14 +246,7 @@
       ...state.intakeData,
       [form.id]: { ...(state.intakeData[form.id] || {}), ...formData },
     };
-    const signedEl = document.getElementById('portalIntakeSigned');
-    const signedNow = !!signedEl?.checked;
-    if (signedNow && !state.intakeSigned.includes(form.id)) {
-      state.intakeSigned.push(form.id);
-      state.intakeSkipped = state.intakeSkipped.filter((id) => id !== form.id);
-    } else if (!signedNow) {
-      state.intakeSigned = state.intakeSigned.filter((id) => id !== form.id);
-    }
+    syncPortalIntakeSignature(form);
     const patch = {
       intakeData: state.intakeData,
       intakeForms: state.intakeSigned,
@@ -1066,7 +1099,7 @@
     const formData = state.intakeData[form.id] || {};
     const isSigned = state.intakeSigned.includes(form.id);
     const isSkipped = state.intakeSkipped.includes(form.id) && !isSigned;
-    const formReady = VF?.portalIntakeFormReady(form, state.intakeSigned, state.intakeData);
+    const formReady = VF?.portalIntakeFormReady(form, state.intakeSigned, state.intakeData, state.intakeSkipped);
     const progressPct = ((state.intakeStep + 1) / forms.length) * 100;
     const policyHtml = VF?.renderFormPolicyLinksHtml?.(form, esc) || '';
     const canEdit = form.portal !== false && !form.signAtVisit;
@@ -1087,10 +1120,7 @@
         <div class="studio-book-form studio-portal-intake-form" id="studioPortalIntakeForm">
           <fieldset class="studio-portal-intake-fieldset"${canEdit ? '' : ' disabled'}>
             ${VF.normalizeFormFields(form).map((f) => renderPortalIntakeField(form, f, formData)).join('')}
-            <label class="studio-portal-intake-sign">
-              <input type="checkbox" id="portalIntakeSigned" ${isSigned ? 'checked' : ''}${form.required && canEdit ? ' required' : ''}${canEdit ? '' : ' disabled'}>
-              <span>I have reviewed this section${policyHtml ? ' and the linked policies' : ''}${form.required ? ' and agree (required)' : ''}</span>
-            </label>
+            ${canEdit ? (VF.renderSignaturePadHtml?.(form.id, formData, esc) || '') : ''}
           </fieldset>
           ${isSkipped ? '<p class="studio-portal-intake-skipped-note">This form was skipped at the studio — fill it out and sign below to complete your intake.</p>' : ''}
           ${formReady && !isSkipped ? '<p class="studio-portal-hint">On file — update any fields and save to keep your answers current.</p>' : ''}
@@ -1174,6 +1204,7 @@
         root.innerHTML = renderFormsHub();
       } else if (state.view === 'intake') {
         root.innerHTML = renderIntake();
+        requestAnimationFrame(() => bindPortalSignaturePads());
       } else if (state.view === 'intake-done') {
         root.innerHTML = renderIntakeDone();
       } else if (state.view === 'dashboard') {
@@ -1388,21 +1419,13 @@
         const VF = window.StudioVisitFlow;
         const forms = portalIntakeForms();
         const form = forms[state.intakeStep];
-        const signedEl = document.getElementById('portalIntakeSigned');
+        if (form) syncPortalIntakeSignature(form);
         const mergedData = form ? {
           ...state.intakeData,
           [form.id]: { ...(state.intakeData[form.id] || {}), ...collectIntakeFormData(form) },
         } : state.intakeData;
-        const trialSigned = signedEl?.checked && form && !state.intakeSigned.includes(form.id)
-          ? [...state.intakeSigned, form.id]
-          : [...state.intakeSigned];
-        if (!form || !VF?.portalIntakeFormReady(form, trialSigned, mergedData)) {
-          state.error = 'Complete required fields and check the agreement box to continue.';
-          render();
-          return;
-        }
-        if (signedEl && !signedEl.checked) {
-          state.error = 'Please check the agreement box to continue.';
+        if (!form || !VF?.portalIntakeFormReady(form, state.intakeSigned, mergedData, state.intakeSkipped)) {
+          state.error = 'Complete required fields and sign with your finger to continue.';
           render();
           return;
         }
@@ -1417,25 +1440,17 @@
         const VF = window.StudioVisitFlow;
         const forms = portalIntakeForms();
         const form = forms[state.intakeStep];
-        const signedEl = document.getElementById('portalIntakeSigned');
-        if (signedEl && !signedEl.checked) {
-          state.error = 'Please check the agreement box to submit.';
-          render();
-          return;
-        }
+        if (form) syncPortalIntakeSignature(form);
         if (form) {
           const mergedData = {
             ...state.intakeData,
             [form.id]: { ...(state.intakeData[form.id] || {}), ...collectIntakeFormData(form) },
           };
-          if (signedEl?.checked && !state.intakeSigned.includes(form.id)) {
-            state.intakeSigned.push(form.id);
-          }
           const requiredOk = forms
             .filter((f) => f.required)
-            .every((f) => VF.portalIntakeFormReady(f, state.intakeSigned, mergedData));
+            .every((f) => VF.portalIntakeFormReady(f, state.intakeSigned, mergedData, state.intakeSkipped));
           if (!requiredOk) {
-            state.error = 'Complete all required forms before submitting.';
+            state.error = 'Complete all required forms and signatures before submitting.';
             render();
             return;
           }
