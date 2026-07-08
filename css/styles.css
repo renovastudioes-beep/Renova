@@ -6290,6 +6290,10 @@ img { max-width: 100%; display: block; }
   color: #0f766e !important;
 }
 
+body.admin-overlay-open {
+  overflow: hidden;
+}
+
 .studio-post-visit-banner {
   margin: 0 0 16px;
   padding: 16px 18px;
@@ -6298,6 +6302,15 @@ img { max-width: 100%; display: block; }
   border: 1px solid rgba(0, 113, 227, 0.18);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+@media (max-width: 1100px) {
+  .studio-post-visit-banner {
+    position: sticky;
+    top: 8px;
+    z-index: 120;
+    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.08);
+  }
 }
 
 .studio-post-visit-banner--apply_visit {
@@ -12581,6 +12594,8 @@ img { max-width: 100%; display: block; }
   overflow-y: auto;
   min-height: 0;
   padding-right: 2px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .studio-glass-lead {
@@ -13155,13 +13170,14 @@ img { max-width: 100%; display: block; }
 
 @media (max-width: 560px) {
   .studio-glass-wizard {
-    padding: 12px;
-    align-items: flex-end;
+    padding: max(12px, var(--safe-top)) 12px max(12px, var(--safe-bottom)) 12px;
+    align-items: center;
+    justify-content: center;
   }
 
   .studio-glass-wizard-panel {
-    max-height: 92vh;
-    border-radius: 20px 20px 0 0;
+    max-height: min(88dvh, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 24px));
+    border-radius: 20px;
     padding: 24px 20px 18px;
   }
 

@@ -1734,7 +1734,7 @@ window.RenvoaStudioUI = (function () {
     }
 
     return `
-      <div class="studio-post-visit-banner studio-post-visit-banner--${step}">
+      <div class="studio-post-visit-banner studio-post-visit-banner--${step}" id="studioPostVisitBanner">
         <div class="studio-post-visit-banner-head">
           <span class="studio-post-visit-eyebrow">End of visit</span>
           <strong>${firstVisit ? 'First visit checkout' : 'Visit checkout'}</strong>
@@ -1867,7 +1867,7 @@ window.RenvoaStudioUI = (function () {
     const selectedSubs = draft.subs || [];
     const activityConfig = draft.activityId ? VF.getActivityConfig(draft.activityId) : null;
     const suggestedServices = draft.activityId ? VF.getSuggestedBillableServices(appt, draft.activityId) : [];
-    const addonOptions = VF.getProviderAddonOptions();
+    const addonOptions = VF.getProviderAddonOptions(appt);
     const selectedAddons = draft.addonIds || [];
     const draftPrimary = draft.lineItems?.[0]?.serviceId || '';
     const draftPrimarySvc = draftPrimary ? S().getService(draftPrimary) : null;

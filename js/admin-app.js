@@ -123,6 +123,22 @@
   let studioInactiveProgramModalData = null;
   let pendingPhotoUploadCtx = null;
   let activeCameraStream = null;
+  let lastAdminScrollSyncKey = '';
+
+  const STUDIO_OVERLAY_IDS = [
+    'studioBookWizard',
+    'studioRebookModal',
+    'studioApptModal',
+    'studioProviderModal',
+    'studioIntakeModal',
+    'studioAllergyModal',
+    'studioPosAuthModal',
+    'studioInactiveProgramModal',
+    'studioPhotoPromptModal',
+    'posPresentOverlay',
+    'studioFinanceOverlay',
+    'studioProgramModal',
+  ];
 
   function studioNotify(msg, type) {
     studioFlash = msg;
@@ -471,6 +487,49 @@
     }
   }
 
+  function syncAdminViewScroll() {
+    const scrollRoot = document.scrollingElement || document.documentElement;
+    const openOverlay = STUDIO_OVERLAY_IDS.map((id) => document.getElementById(id)).find(Boolean);
+
+    if (openOverlay) {
+      document.body.classList.add('admin-overlay-open');
+      scrollRoot.scrollTo(0, 0);
+      openOverlay.querySelectorAll('.studio-glass-wizard-body, .studio-program-modal-panel').forEach((el) => {
+        el.scrollTop = 0;
+      });
+      return;
+    }
+
+    document.body.classList.remove('admin-overlay-open');
+
+    const onPostVisitPos = businessMode === 'clinic'
+      && studioSubView === 'pos'
+      && studioPostVisitAwaitingCheckout
+      && studioPostVisitApptId
+      && studioPosMode !== 'walkin';
+
+    if (!onPostVisitPos) {
+      lastAdminScrollSyncKey = '';
+      return;
+    }
+
+    const meta = window.RenvoaStudioUI?.getPostVisitFlowMeta?.(getPostVisitCheckoutCtx());
+    const syncKey = meta
+      ? `${meta.step}:${!!studioRebookOpen}:${studioPostVisitPendingRebookApptId || ''}:${!!studioPostVisitFollowUpSkipped}`
+      : 'pending';
+    if (syncKey === lastAdminScrollSyncKey) return;
+    lastAdminScrollSyncKey = syncKey;
+
+    requestAnimationFrame(() => {
+      const banner = document.getElementById('studioPostVisitBanner');
+      if (banner) {
+        banner.scrollIntoView({ block: 'start', behavior: 'auto' });
+        return;
+      }
+      scrollRoot.scrollTo(0, 0);
+    });
+  }
+
   let renderViewDebounce = null;
 
   function scheduleRenderView(ms = 0) {
@@ -578,6 +637,9 @@
     updateNavActiveState();
     window.StudioApptTimers?.syncForCalendarView(businessMode === 'clinic' && studioSubView === 'calendar');
     restoreInputFocus(focusState);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => syncAdminViewScroll());
+    });
     if (businessMode === 'clinic' && studioFinanceOpen) {
       requestAnimationFrame(() => initStudioFinanceEmbed());
     }
@@ -3293,6 +3355,7 @@
     $('#posCheckoutBtn')?.addEventListener('click', () => {
       if (!studioPosCart.items.length) return;
       if (!assertPostVisitPaymentReady()) {
+        lastAdminScrollSyncKey = '';
         renderView();
         return;
       }

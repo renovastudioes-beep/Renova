@@ -243,15 +243,16 @@ body {
 
   .studio-glass-wizard {
     padding: max(12px, var(--safe-top)) max(12px, var(--safe-right)) max(12px, var(--safe-bottom)) max(12px, var(--safe-left));
-    align-items: flex-end;
+    align-items: center;
+    justify-content: center;
   }
 
   .studio-glass-wizard-panel,
   .studio-program-modal-panel.studio-glass-panel {
     width: 100%;
     max-width: none;
-    max-height: min(92dvh, calc(100dvh - var(--safe-top) - 24px));
-    border-radius: 20px 20px 0 0;
+    max-height: min(88dvh, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 24px));
+    border-radius: 20px;
   }
 
   .studio-glass-wizard-panel-wide {

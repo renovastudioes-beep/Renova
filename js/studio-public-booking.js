@@ -294,6 +294,16 @@
     return RS().formatPrice(total);
   }
 
+  function renderLuxAddonSummaryRows() {
+    if (!state.luxAddons.length) return '';
+    const addons = RS().getMensLuxAddons();
+    return state.luxAddons.map((id) => {
+      const lux = addons.find((a) => a.id === id);
+      if (!lux) return '';
+      return `<div class="studio-book-summary-row"><span>${esc(lux.name)}</span><strong>+${RS().formatPrice(lux.price)}</strong></div>`;
+    }).join('');
+  }
+
   function categoryMonthlyFrom(cat) {
     if (!RS()?.usesCategoryMonthlyFrom?.(cat)) return null;
     return RS().getCategoryLowestMonthlyFrom(cat, bookingGender());
@@ -745,7 +755,10 @@
       ${renderAttendancePenaltyBanner()}
       <div class="studio-book-summary-card">
         <div class="studio-book-summary-row"><span>${isPackageConsultCategory(state.category) && state.bookingMode === 'consult' ? 'Consultation for' : 'Service'}</span><strong>${esc(state.intendedService)}</strong></div>
-        ${state.fromPriceDisplay && !requiresFullPrice ? `<div class="studio-book-summary-row"><span>Program from</span><strong>${esc(state.fromPriceDisplay)}</strong></div>` : ''}
+        ${state.bookingMode === 'direct' && selectedBookService() ? `<div class="studio-book-summary-row"><span>Service price</span><strong>${RS().formatPrice(selectedBookService().price || 0)}</strong></div>` : ''}
+        ${renderLuxAddonSummaryRows()}
+        ${state.fromPriceDisplay && state.bookingMode === 'direct' ? `<div class="studio-book-summary-row studio-book-summary-total"><span>Total at visit</span><strong>${esc(state.fromPriceDisplay)}</strong></div>` : ''}
+        ${state.fromPriceDisplay && state.bookingMode !== 'direct' && !requiresFullPrice ? `<div class="studio-book-summary-row"><span>Program from</span><strong>${esc(state.fromPriceDisplay)}</strong></div>` : ''}
         <div class="studio-book-summary-row"><span>Date</span><strong>${esc(fmtDate(state.date))}</strong></div>
         <div class="studio-book-summary-row"><span>Time</span><strong>${esc(fmtTime12(state.time))}</strong></div>
         <div class="studio-book-summary-row studio-book-summary-total"><span>Due today</span><strong>${RS().formatPrice(dueToday)}</strong></div>

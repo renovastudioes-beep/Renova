@@ -379,7 +379,23 @@ window.StudioVisitFlow = (function () {
       push(S.getService(li.serviceId));
     });
 
-    resolveBookedServiceIds(appt).forEach((id) => push(S.getService(id)));
+    resolveBookedServiceIds(appt).forEach((id) => {
+      const svc = S.getService(id);
+      if (svc) push(svc);
+      else if (S.isLuxAddonId?.(id)) {
+        const lux = S.luxAddonAsService?.(S.getMensLuxAddon(id));
+        if (lux) push(lux);
+      }
+    });
+    (appt.bookedServices || []).forEach((row) => {
+      if (row?.mode !== 'lux_addon' || !row.serviceId) return;
+      const lux = S.luxAddonAsService?.(S.getMensLuxAddon(row.serviceId));
+      if (lux) push(lux);
+    });
+    (S.resolveApptLuxAddonIds?.(appt) || []).forEach((id) => {
+      const lux = S.luxAddonAsService?.(S.getMensLuxAddon(id));
+      if (lux) push(lux);
+    });
     push(S.getService(appt.serviceId));
 
     return results;
@@ -509,11 +525,14 @@ window.StudioVisitFlow = (function () {
     }
     const activityId = resolveDefaultActivityForAppt(appt);
     const validActivity = activityId && getActivity(flow, activityId) ? activityId : '';
+    const luxAddonIds = apptUsesLuxAddonPricing(appt)
+      ? (window.RenvoaStudios?.resolveApptLuxAddonIds?.(appt) || [])
+      : [];
     return {
       activityId: validActivity,
       subs: [],
       details: {},
-      addonIds: [],
+      addonIds: [...luxAddonIds],
       lineItems: validActivity ? resolveDefaultLineItems(appt, validActivity) : [],
       notes: '',
     };
@@ -708,9 +727,32 @@ window.StudioVisitFlow = (function () {
     return PROVIDER_ACTIVITY_CONFIG[activityId] || { detailFields: [], serviceIds: [] };
   }
 
-  function getProviderAddonOptions() {
+  function apptUsesLuxAddonPricing(appt) {
+    const S = window.RenvoaStudios;
+    if (!S || !appt) return false;
+    const luxIds = S.resolveApptLuxAddonIds?.(appt) || [];
+    if (luxIds.length) return true;
+    const primary = S.getService(appt.bookServiceId || appt.serviceId);
+    return !!primary?.luxAddonsEligible;
+  }
+
+  function resolveServiceOrLuxAddon(serviceId) {
+    const S = window.RenvoaStudios;
+    if (!S || !serviceId) return null;
+    const svc = S.getService(serviceId);
+    if (svc) return svc;
+    if (S.isLuxAddonId?.(serviceId)) {
+      return S.luxAddonAsService?.(S.getMensLuxAddon(serviceId));
+    }
+    return null;
+  }
+
+  function getProviderAddonOptions(appt) {
     const S = window.RenvoaStudios;
     if (!S) return [];
+    if (apptUsesLuxAddonPricing(appt)) {
+      return S.getMensLuxAddons().map((lux) => S.luxAddonAsService(lux)).filter(Boolean);
+    }
     return S.filterServices({ category: 'addon' }).filter((s) => s.isAddon || s.category === 'addon');
   }
 
@@ -817,7 +859,8 @@ window.StudioVisitFlow = (function () {
     const rawLineItems = session.lineItems || [];
     const lineItems = rawLineItems.filter((li) => {
       if (li.packageVisitLine) return true;
-      return isBillableAppointmentService(S.getService(li.serviceId));
+      const svc = resolveServiceOrLuxAddon(li.serviceId);
+      return isBillableAppointmentService(svc) || !!svc?.isLuxAddon;
     });
     const effectiveLineItems = lineItems.length
       ? lineItems
@@ -838,7 +881,7 @@ window.StudioVisitFlow = (function () {
         });
         return;
       }
-      const svc = S.getService(li.serviceId);
+      const svc = resolveServiceOrLuxAddon(li.serviceId);
       if (!svc) return;
       const name = S.shortName(svc.name);
       items.push({
@@ -846,18 +889,20 @@ window.StudioVisitFlow = (function () {
         name: idx === 0 && detailNote ? `${name} — ${detailNote}` : name,
         price: li.price ?? svc.price ?? 0,
         qty: li.qty || 1,
+        luxAddon: !!svc.isLuxAddon,
         extOptions: appt?.extOptions || null,
       });
     });
     (session.addonIds || []).forEach((addonId) => {
       if (effectiveLineItems.some((li) => li.serviceId === addonId)) return;
-      const svc = S.getService(addonId);
+      const svc = resolveServiceOrLuxAddon(addonId);
       if (!svc) return;
       items.push({
         id: svc.id,
         name: S.shortName(svc.name),
         price: svc.price || 0,
         qty: 1,
+        luxAddon: !!svc.isLuxAddon,
       });
     });
     return items;

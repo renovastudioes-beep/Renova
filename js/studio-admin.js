@@ -2032,6 +2032,35 @@ window.RenvoaStudios = (function () {
     return window.STUDIO_MENS_LUX_ADDONS || [];
   }
 
+  function getMensLuxAddon(id) {
+    return getMensLuxAddons().find((a) => a.id === id) || null;
+  }
+
+  function isLuxAddonId(id) {
+    return !!getMensLuxAddon(id);
+  }
+
+  function luxAddonAsService(lux) {
+    if (!lux) return null;
+    return {
+      id: lux.id,
+      name: lux.name,
+      price: lux.price,
+      category: 'lux_addon',
+      isLuxAddon: true,
+      duration: 'Add-on',
+    };
+  }
+
+  function resolveApptLuxAddonIds(appt) {
+    if (!appt) return [];
+    const fromField = Array.isArray(appt.luxAddons) ? appt.luxAddons : [];
+    const fromBooked = (appt.bookedServices || [])
+      .filter((row) => row?.mode === 'lux_addon' && row.serviceId)
+      .map((row) => row.serviceId);
+    return [...new Set([...fromField, ...fromBooked].filter(Boolean))];
+  }
+
   function calcMensLuxAddonTotal(addonIds) {
     const addons = getMensLuxAddons();
     return (addonIds || []).reduce((sum, id) => {
@@ -2280,6 +2309,7 @@ window.RenvoaStudios = (function () {
       clientPreferences: bookingExtras.clientPreferences,
       bookingInspoPhotos: bookingExtras.bookingInspoPhotos,
       bookingReviewedAt: data.bookingReviewedAt || '',
+      luxAddons: data.luxAddons || [],
       beforePhotosAt: data.beforePhotosAt || '',
       afterPhotosAt: data.afterPhotosAt || '',
       extOptions: data.extOptions || null,
@@ -4787,6 +4817,16 @@ window.RenvoaStudios = (function () {
       price: s.price || 0,
       mode: resolvePublicBookingMode(s),
     }));
+    (luxAddons || []).forEach((id) => {
+      const lux = getMensLuxAddon(id);
+      if (!lux) return;
+      bookedServices.push({
+        serviceId: lux.id,
+        serviceName: lux.name,
+        price: lux.price,
+        mode: 'lux_addon',
+      });
+    });
     const addonTotal = calcMensLuxAddonTotal(luxAddons);
     const basePrice = svcs.reduce((sum, s) => sum + (s.price || 0), 0);
     let duration = svcs.reduce((sum, s) => sum + getAppointmentDurationMin(s), 0);
@@ -5091,14 +5131,16 @@ window.RenvoaStudios = (function () {
 
     const billable = VF?.resolveApptBillableServices?.(appt) || [];
     if (billable.length) {
+      const hasLuxAddon = billable.some((svc) => svc.isLuxAddon);
       return billable.map((svc, idx) => ({
         id: svc.id,
         name: shortName(svc.name),
-        price: appt.price > 0 && billable.length === 1 && idx === 0
-          ? appt.price
-          : (svc.price || 0),
+        price: hasLuxAddon || billable.length > 1
+          ? (svc.price || 0)
+          : (appt.price > 0 ? appt.price : (svc.price || 0)),
         qty: 1,
-        extOptions: idx === 0 ? (appt.extOptions || null) : null,
+        luxAddon: !!svc.isLuxAddon,
+        extOptions: idx === 0 && !svc.isLuxAddon ? (appt.extOptions || null) : null,
       }));
     }
 
@@ -5848,6 +5890,10 @@ window.RenvoaStudios = (function () {
     resolvePublicBookingMode,
     resolvePublicConsultLabel,
     getMensLuxAddons,
+    getMensLuxAddon,
+    isLuxAddonId,
+    luxAddonAsService,
+    resolveApptLuxAddonIds,
     calcMensLuxAddonTotal,
     calcDirectBookingDuration,
     calcDirectBookingSchedulingDuration,
