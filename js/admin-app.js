@@ -345,14 +345,7 @@
 
   function renderApp() {
     showPanel('app');
-    const meta = $('#adminMeta');
-    if (meta) {
-      const date = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-      const storage = window.StudioStorage;
-      const mode = storage?.getMode?.() || 'local';
-      const cloudLabel = mode === 'cloud' ? ' · Cloud sync on' : (mode === 'local-fallback' ? ' · Cloud offline' : '');
-      meta.textContent = date + cloudLabel;
-    }
+    updateAppMeta();
     try {
       updateNewBadge();
       updateCrmBadge();
@@ -535,6 +528,8 @@
   }
 
   let renderViewDebounce = null;
+  let clientsTabSyncInFlight = null;
+  let lastClientsTabSyncAt = 0;
 
   function scheduleRenderView(ms = 0) {
     if (renderViewDebounce) clearTimeout(renderViewDebounce);
@@ -613,6 +608,37 @@
     });
   }
 
+  function maybeSyncClientsTab() {
+    if (businessMode !== 'clinic' || studioSubView !== 'clients') return;
+    const storage = window.StudioStorage;
+    if (!storage?.syncNow || storage.getMode?.() !== 'cloud') return;
+    const now = Date.now();
+    if (now - lastClientsTabSyncAt < 12000) return;
+    if (clientsTabSyncInFlight) return;
+    lastClientsTabSyncAt = now;
+    clientsTabSyncInFlight = storage.syncNow()
+      .then(() => {
+        updateAppMeta();
+        renderView();
+      })
+      .catch((err) => {
+        console.warn('Clients tab cloud sync failed:', err);
+      })
+      .finally(() => {
+        clientsTabSyncInFlight = null;
+      });
+  }
+
+  function updateAppMeta() {
+    const meta = $('#adminMeta');
+    if (!meta) return;
+    const date = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    const storage = window.StudioStorage;
+    const mode = storage?.getMode?.() || 'local';
+    const cloudLabel = mode === 'cloud' ? ' · Cloud sync on' : (mode === 'local-fallback' ? ' · Cloud offline' : '');
+    meta.textContent = date + cloudLabel;
+  }
+
   function renderView() {
     if (!mainEl) {
       showFatal('Admin UI failed to mount — #adminMain not found in the page.');
@@ -647,6 +673,7 @@
     if (businessMode === 'clinic' && studioFinanceOpen) {
       requestAnimationFrame(() => initStudioFinanceEmbed());
     }
+    maybeSyncClientsTab();
     } catch (err) {
       console.error('RENVOA admin view error:', err);
       mainEl.innerHTML = `<div class="admin-panel"><h2>Could not load this section</h2><p>${esc(err.message)}</p><button type="button" class="btn-primary btn-sm" id="adminRetryBtn">Retry</button></div>`;
@@ -4629,19 +4656,22 @@
 
     $('#studioCloudSyncBtn')?.addEventListener('click', async () => {
       const storage = window.StudioStorage;
-      if (!storage?.refreshFromCloud) {
+      if (!storage?.syncNow) {
         studioNotify('Cloud storage is not configured.', 'error');
         return;
       }
       try {
-        const result = await storage.refreshFromCloud();
+        const result = await storage.syncNow();
         const clientCount = window.RenvoaStudios?.getClients?.().length ?? 0;
+        const cloudClients = result?.counts?.clients;
+        const cloudNote = cloudClients != null ? ` Cloud has ${cloudClients}.` : '';
         studioNotify(
-          result?.updated
-            ? `Synced from cloud — ${clientCount} client${clientCount !== 1 ? 's' : ''} on this device.`
-            : `Already up to date — ${clientCount} client${clientCount !== 1 ? 's' : ''} on this device.`,
+          result?.reconcile?.uploaded
+            ? `Synced — uploaded ${result.reconcile.uploaded} collection${result.reconcile.uploaded !== 1 ? 's' : ''}. ${clientCount} client${clientCount !== 1 ? 's' : ''} on this device.${cloudNote}`
+            : `Synced — ${clientCount} client${clientCount !== 1 ? 's' : ''} on this device.${cloudNote}`,
           'success',
         );
+        updateAppMeta();
         renderView();
       } catch (err) {
         studioNotify(err.message || 'Cloud sync failed.', 'error');
@@ -4657,14 +4687,40 @@
       }
       try {
         const result = await storage.migrateLocalToCloud();
+        const reconcile = await storage.reconcileToCloud?.();
         const clientCount = window.RenvoaStudios?.getClients?.().length ?? 0;
+        const counts = await storage.fetchCloudCounts?.().catch(() => null);
+        const cloudNote = counts?.clients != null ? ` Cloud now has ${counts.clients} client${counts.clients !== 1 ? 's' : ''}.` : '';
         studioNotify(
-          `Merged and uploaded ${result.migrated} collection${result.migrated !== 1 ? 's' : ''} — ${clientCount} client${clientCount !== 1 ? 's' : ''} on this device now.`,
+          `Merged and uploaded ${result.migrated} collection${result.migrated !== 1 ? 's' : ''}${reconcile?.uploaded ? ` (+${reconcile.uploaded} reconciled)` : ''} — ${clientCount} client${clientCount !== 1 ? 's' : ''} on this device.${cloudNote}`,
           'success',
         );
+        updateAppMeta();
         renderView();
       } catch (err) {
         studioNotify(err.message || 'Cloud upload failed.', 'error');
+        renderView();
+      }
+    });
+
+    $('#studioCloudRetryBtn')?.addEventListener('click', async () => {
+      const storage = window.StudioStorage;
+      if (!storage?.retryCloudConnection) {
+        studioNotify('Cloud storage is not configured.', 'error');
+        return;
+      }
+      try {
+        const result = await storage.retryCloudConnection();
+        if (result.ok) {
+          await storage.syncNow?.();
+          studioNotify('Cloud connection restored.', 'success');
+        } else {
+          studioNotify(result.error || 'Still offline — check your network and try again.', 'error');
+        }
+        updateAppMeta();
+        renderView();
+      } catch (err) {
+        studioNotify(err.message || 'Could not reconnect to cloud.', 'error');
         renderView();
       }
     });
@@ -5865,6 +5921,12 @@
         if (sysErr) {
           sysErr.textContent = `Cloud sync unavailable (${storageStatus.error}). Using local data on this device.`;
           sysErr.hidden = false;
+        }
+      } else if (storageStatus?.mode === 'cloud') {
+        try {
+          await window.StudioStorage?.syncNow?.();
+        } catch (reconcileErr) {
+          console.warn('Admin cloud reconcile failed:', reconcileErr);
         }
       }
     } catch (err) {

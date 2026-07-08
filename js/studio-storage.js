@@ -23,9 +23,12 @@ window.StudioStorage = (function () {
   ]);
 
   const FETCH_TIMEOUT_MS = 12000;
+  const INIT_FETCH_TIMEOUT_MS = 20000;
+  const INIT_MAX_ATTEMPTS = 3;
   const WRITE_DEBOUNCE_MS = 500;
   const NOTIFY_DEBOUNCE_MS = 120;
   const ECHO_SUPPRESS_MS = 2500;
+  const FLUSH_MAX_ATTEMPTS = 3;
 
   const ARRAY_MERGE_KEYS = new Set([
     'renova-studio-clients',
@@ -52,9 +55,11 @@ window.StudioStorage = (function () {
   const writeTimers = new Map();
   const listeners = new Set();
   const echoSuppress = new Map();
+  const flushInFlight = new Map();
   let notifyTimer = null;
   const pendingNotifyKeys = new Set();
   let initError = null;
+  let cloudClientCount = null;
 
   function cfg() {
     return window.RENVOA_CONFIG?.cloud || {};
@@ -103,8 +108,47 @@ window.StudioStorage = (function () {
   }
 
   function getExistingCollection(key, fallback = []) {
-    if (cache.has(key)) return cache.get(key);
-    return readLocal(key, fallback);
+    return getBestLocalSnapshot(key, fallback);
+  }
+
+  /** Union of in-memory cache and localStorage — never miss records that exist only on disk. */
+  function getBestLocalSnapshot(key, fallback) {
+    const local = readLocal(key, fallback);
+    if (!cache.has(key)) return local;
+    const cached = cache.get(key);
+    if (ARRAY_MERGE_KEYS.has(key) && Array.isArray(cached) && Array.isArray(local)) {
+      return mergeArrayUnion(local, cached);
+    }
+    if (ARRAY_MERGE_KEYS.has(key) && Array.isArray(cached)) return cached;
+    if (cached !== undefined && cached !== null) return cached;
+    return local;
+  }
+
+  function mergeValueForUpload(key, localValue, cloudData) {
+    if (ARRAY_MERGE_KEYS.has(key) && Array.isArray(localValue) && Array.isArray(cloudData)) {
+      return mergeArrayUnion(localValue, cloudData);
+    }
+    if (cloudData == null || cloudData === undefined) return localValue;
+    const localEmpty = Array.isArray(localValue)
+      ? !localValue.length
+      : (localValue && typeof localValue === 'object' && !Object.keys(localValue).length);
+    if (localEmpty) return cloudData;
+    return localValue;
+  }
+
+  async function fetchCloudRow(key) {
+    const { data, error } = await withTimeout(
+      client
+        .from('studio_collections')
+        .select('collection_key, data, version, updated_at')
+        .eq('workspace_id', workspaceId)
+        .eq('collection_key', key)
+        .limit(1),
+      FETCH_TIMEOUT_MS,
+      `Cloud read (${key})`,
+    );
+    if (error) throw new Error(error.message || `Could not read ${key} from cloud.`);
+    return (data && data[0]) || null;
   }
 
   /** Union-merge for cloud load, realtime, and refresh — never drop rows from other devices. */
@@ -205,13 +249,15 @@ window.StudioStorage = (function () {
   function read(key, fallback) {
     if (!isCloudEnabled() || !isManagedKey(key)) return readLocal(key, fallback);
     if (!ready) return readLocal(key, fallback);
-    if (cache.has(key)) return cache.get(key);
-    const local = readLocal(key, fallback);
-    if (local !== fallback) {
-      cache.set(key, local);
-      dataFingerprints.set(key, fingerprint(local));
+    const snapshot = getBestLocalSnapshot(key, fallback);
+    if (snapshot !== fallback) {
+      const fp = fingerprint(snapshot);
+      if (dataFingerprints.get(key) !== fp || !cache.has(key)) {
+        cache.set(key, snapshot);
+        dataFingerprints.set(key, fp);
+      }
     }
-    return local;
+    return snapshot;
   }
 
   function write(key, value) {
@@ -268,30 +314,77 @@ window.StudioStorage = (function () {
     pendingWrites.delete(key);
     if (!client || value === undefined) return;
 
-    const currentVersion = (cache.get(`__ver:${key}`) || 0) + 1;
-    cache.set(`__ver:${key}`, currentVersion);
-    echoSuppress.set(`${key}:${currentVersion}`, Date.now());
-
-    const { error } = await withTimeout(
-      client
-        .from('studio_collections')
-        .upsert({
-          workspace_id: workspaceId,
-          collection_key: key,
-          data: value,
-          version: currentVersion,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'workspace_id,collection_key' }),
-      FETCH_TIMEOUT_MS,
-      `Cloud save (${key})`,
-    );
-
-    if (error) {
-      console.error('StudioStorage cloud write failed:', key, error);
-      window.dispatchEvent(new CustomEvent('studio-storage-error', {
-        detail: { key, error: error.message || String(error) },
-      }));
+    const prior = flushInFlight.get(key);
+    if (prior) {
+      await prior.catch(() => {});
+      if (pendingWrites.has(key)) queueCloudWrite(key, pendingWrites.get(key));
+      return;
     }
+
+    const job = performFlushWrite(key, value);
+    flushInFlight.set(key, job);
+    try {
+      await job;
+    } finally {
+      flushInFlight.delete(key);
+    }
+  }
+
+  async function performFlushWrite(key, localValue) {
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= FLUSH_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        const cloudRow = await fetchCloudRow(key);
+        const cloudData = cloudRow?.data;
+        const cloudVersion = cloudRow?.version || 0;
+        const merged = mergeValueForUpload(key, localValue, cloudData);
+        const localVersion = cache.get(`__ver:${key}`) || 0;
+        const nextVersion = Math.max(cloudVersion, localVersion) + 1;
+
+        const mergedFp = fingerprint(merged);
+        if (dataFingerprints.get(key) !== mergedFp) {
+          applyMergedRow(key, merged, nextVersion);
+          scheduleNotify(key);
+        } else {
+          cache.set(`__ver:${key}`, nextVersion);
+        }
+
+        echoSuppress.set(`${key}:${nextVersion}`, Date.now());
+
+        const { error } = await withTimeout(
+          client
+            .from('studio_collections')
+            .upsert({
+              workspace_id: workspaceId,
+              collection_key: key,
+              data: merged,
+              version: nextVersion,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'workspace_id,collection_key' }),
+          FETCH_TIMEOUT_MS,
+          `Cloud save (${key})`,
+        );
+
+        if (error) throw new Error(error.message || String(error));
+        if (key === 'renova-studio-clients' && Array.isArray(merged)) {
+          cloudClientCount = merged.length;
+        }
+        return;
+      } catch (err) {
+        lastError = err;
+        if (attempt < FLUSH_MAX_ATTEMPTS) {
+          await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+        }
+      }
+    }
+
+    console.error('StudioStorage cloud write failed:', key, lastError);
+    pendingWrites.set(key, getBestLocalSnapshot(key, localValue));
+    queueCloudWrite(key, pendingWrites.get(key));
+    window.dispatchEvent(new CustomEvent('studio-storage-error', {
+      detail: { key, error: lastError?.message || String(lastError) },
+    }));
   }
 
   async function flushAll() {
@@ -299,25 +392,155 @@ window.StudioStorage = (function () {
     await Promise.all(keys.map((key) => flushWrite(key)));
   }
 
-  async function loadFromCloud() {
+  function applyMergedRow(key, merged, version) {
+    cache.set(key, merged);
+    if (version != null) cache.set(`__ver:${key}`, version);
+    dataFingerprints.set(key, fingerprint(merged));
+    writeLocal(key, merged);
+  }
+
+  async function loadFromCloud(timeoutMs = FETCH_TIMEOUT_MS) {
     const { data, error } = await withTimeout(
       client
         .from('studio_collections')
         .select('collection_key, data, version, updated_at')
         .eq('workspace_id', workspaceId),
-      FETCH_TIMEOUT_MS,
+      timeoutMs,
       'Cloud load',
     );
 
     if (error) throw new Error(error.message || 'Could not load studio data from cloud.');
 
+    const cloudKeys = new Set();
     (data || []).forEach((row) => {
+      cloudKeys.add(row.collection_key);
       const merged = mergeArrayFromRemote(row.collection_key, row.data);
-      cache.set(row.collection_key, merged);
-      cache.set(`__ver:${row.collection_key}`, row.version || 0);
-      dataFingerprints.set(row.collection_key, fingerprint(merged));
-      writeLocal(row.collection_key, merged);
+      applyMergedRow(row.collection_key, merged, row.version || 0);
+      if (row.collection_key === 'renova-studio-clients' && Array.isArray(merged)) {
+        cloudClientCount = merged.length;
+      }
     });
+
+    STUDIO_KEYS.forEach((key) => {
+      if (cloudKeys.has(key)) return;
+      const local = readLocal(key, key === 'renova-studio-client-photos' ? {} : []);
+      const hasLocal = Array.isArray(local)
+        ? local.length > 0
+        : (local && typeof local === 'object' && Object.keys(local).length > 0);
+      if (!hasLocal) return;
+      applyMergedRow(key, local, cache.get(`__ver:${key}`) || 0);
+    });
+  }
+
+  /** Push union-merged local data to cloud when this device has records the server lacks. */
+  async function reconcileToCloud() {
+    if (!client || !ready || !isCloudEnabled()) {
+      return { ok: false, reason: 'not-ready' };
+    }
+
+    const { data, error } = await withTimeout(
+      client
+        .from('studio_collections')
+        .select('collection_key, data, version')
+        .eq('workspace_id', workspaceId),
+      FETCH_TIMEOUT_MS,
+      'Cloud reconcile',
+    );
+    if (error) throw new Error(error.message || 'Could not reconcile studio data with cloud.');
+
+    const cloudByKey = new Map((data || []).map((row) => [row.collection_key, row]));
+    const payload = [];
+
+    STUDIO_KEYS.forEach((key) => {
+      const fallback = key === 'renova-studio-client-photos' ? {} : [];
+      const localMerged = getBestLocalSnapshot(key, fallback);
+      const cloudRow = cloudByKey.get(key);
+      const cloudData = cloudRow?.data;
+      let merged = localMerged;
+
+      if (ARRAY_MERGE_KEYS.has(key) && Array.isArray(localMerged) && Array.isArray(cloudData)) {
+        merged = mergeArrayUnion(localMerged, cloudData);
+      } else if (
+        (!Array.isArray(localMerged) || !localMerged.length)
+        && cloudData
+        && (Array.isArray(cloudData) ? cloudData.length : Object.keys(cloudData).length)
+      ) {
+        merged = cloudData;
+      }
+
+      const emptyArray = Array.isArray(merged) && merged.length === 0;
+      const emptyObject = merged && typeof merged === 'object' && !Array.isArray(merged) && !Object.keys(merged).length;
+      if (emptyArray || emptyObject) return;
+
+      const mergedFp = fingerprint(merged);
+      if (cloudRow && fingerprint(cloudData) === mergedFp) {
+        applyMergedRow(key, merged, cloudRow.version || 0);
+        return;
+      }
+
+      applyMergedRow(key, merged, Math.max(cloudRow?.version || 0, cache.get(`__ver:${key}`) || 0));
+      const version = Math.max(cloudRow?.version || 0, cache.get(`__ver:${key}`) || 0) + 1;
+      cache.set(`__ver:${key}`, version);
+      payload.push({
+        workspace_id: workspaceId,
+        collection_key: key,
+        data: merged,
+        version,
+        updated_at: new Date().toISOString(),
+      });
+    });
+
+    if (!payload.length) {
+      return { ok: true, uploaded: 0 };
+    }
+
+    const { error: upsertError } = await withTimeout(
+      client.from('studio_collections').upsert(payload, {
+        onConflict: 'workspace_id,collection_key',
+      }),
+      FETCH_TIMEOUT_MS * 2,
+      'Cloud reconcile upload',
+    );
+    if (upsertError) throw new Error(upsertError.message || 'Cloud reconcile upload failed.');
+
+    payload.forEach((row) => {
+      if (row.collection_key === 'renova-studio-clients' && Array.isArray(row.data)) {
+        cloudClientCount = row.data.length;
+      }
+      scheduleNotify(row.collection_key);
+    });
+
+    return { ok: true, uploaded: payload.length };
+  }
+
+  async function syncNow() {
+    if (!client || !ready || !isCloudEnabled()) {
+      return { ok: false, reason: 'not-ready' };
+    }
+    const refresh = await refreshFromCloud();
+    const reconcile = await reconcileToCloud();
+    const counts = await fetchCloudCounts().catch(() => null);
+    return { ok: true, refresh, reconcile, counts };
+  }
+
+  async function fetchCloudCounts() {
+    if (!client || !isCloudEnabled()) return null;
+    const { data, error } = await withTimeout(
+      client
+        .from('studio_collections')
+        .select('collection_key, data')
+        .eq('workspace_id', workspaceId)
+        .in('collection_key', ['renova-studio-clients', 'renova-studio-appointments']),
+      FETCH_TIMEOUT_MS,
+      'Cloud counts',
+    );
+    if (error) throw new Error(error.message || 'Could not fetch cloud counts.');
+    const clientsRow = (data || []).find((r) => r.collection_key === 'renova-studio-clients');
+    const apptsRow = (data || []).find((r) => r.collection_key === 'renova-studio-appointments');
+    const clients = Array.isArray(clientsRow?.data) ? clientsRow.data.length : 0;
+    const appointments = Array.isArray(apptsRow?.data) ? apptsRow.data.length : 0;
+    cloudClientCount = clients;
+    return { clients, appointments };
   }
 
   async function refreshFromCloud() {
@@ -404,36 +627,61 @@ window.StudioStorage = (function () {
       .subscribe();
   }
 
+  async function connectCloud(options = {}) {
+    workspaceId = options.workspaceId || cfg().workspaceId || 'onyx';
+    initError = null;
+
+    if (!window.supabase?.createClient) {
+      throw new Error('Supabase client not loaded. Add the CDN script before studio-storage.js.');
+    }
+
+    client = window.supabase.createClient(cfg().supabaseUrl, cfg().supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    let lastErr = null;
+    for (let attempt = 1; attempt <= INIT_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        const timeoutMs = attempt >= INIT_MAX_ATTEMPTS ? INIT_FETCH_TIMEOUT_MS : FETCH_TIMEOUT_MS;
+        await loadFromCloud(timeoutMs);
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+        console.warn(`StudioStorage cloud load attempt ${attempt}/${INIT_MAX_ATTEMPTS} failed:`, err);
+        if (attempt < INIT_MAX_ATTEMPTS) {
+          await new Promise((resolve) => setTimeout(resolve, 800 * attempt));
+        }
+      }
+    }
+    if (lastErr) throw lastErr;
+
+    ready = true;
+    applyPreReadyWrites();
+    try {
+      await reconcileToCloud();
+    } catch (reconcileErr) {
+      console.warn('StudioStorage reconcile on init failed:', reconcileErr);
+    }
+    subscribeRealtime();
+    fetchCloudCounts().catch(() => {});
+    if (!document.hidden) {
+      refreshFromCloud().catch((err) => {
+        console.warn('StudioStorage post-init refresh failed:', err);
+      });
+    }
+    return { mode: 'cloud', workspaceId, collections: cache.size };
+  }
+
   async function init(options = {}) {
     if (readyPromise) return readyPromise;
 
     readyPromise = (async () => {
-      workspaceId = options.workspaceId || cfg().workspaceId || 'onyx';
-      initError = null;
-
       if (!isCloudEnabled()) {
         ready = true;
         return { mode: 'local' };
       }
-
-      if (!window.supabase?.createClient) {
-        throw new Error('Supabase client not loaded. Add the CDN script before studio-storage.js.');
-      }
-
-      client = window.supabase.createClient(cfg().supabaseUrl, cfg().supabaseAnonKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-      });
-
-      await loadFromCloud();
-      ready = true;
-      applyPreReadyWrites();
-      subscribeRealtime();
-      if (!document.hidden) {
-        refreshFromCloud().catch((err) => {
-          console.warn('StudioStorage post-init refresh failed:', err);
-        });
-      }
-      return { mode: 'cloud', workspaceId, collections: cache.size };
+      return connectCloud(options);
     })().catch((err) => {
       initError = err.message || String(err);
       readyPromise = null;
@@ -443,6 +691,22 @@ window.StudioStorage = (function () {
     });
 
     return readyPromise;
+  }
+
+  async function retryCloudConnection(options = {}) {
+    if (!isCloudEnabled()) return { ok: false, reason: 'cloud-disabled' };
+    if (realtimeChannel) {
+      try { client?.removeChannel(realtimeChannel); } catch { /* ignore */ }
+      realtimeChannel = null;
+    }
+    readyPromise = null;
+    ready = false;
+    initError = null;
+    const result = await init(options);
+    if (result.mode === 'cloud') {
+      window.dispatchEvent(new CustomEvent('studio-storage-remote', { detail: { keys: [...STUDIO_KEYS] } }));
+    }
+    return { ok: result.mode === 'cloud', ...result };
   }
 
   function whenReady() {
@@ -487,7 +751,8 @@ window.StudioStorage = (function () {
 
     const payload = [];
     STUDIO_KEYS.forEach((key) => {
-      const local = readLocal(key, key === 'renova-studio-client-photos' ? {} : []);
+      const fallback = key === 'renova-studio-client-photos' ? {} : [];
+      const local = getBestLocalSnapshot(key, fallback);
       const cloudRow = cloudByKey.get(key);
       const cloudData = cloudRow?.data;
       let merged = local;
@@ -539,6 +804,7 @@ window.StudioStorage = (function () {
     return {
       clients: Array.isArray(clients) ? clients.length : 0,
       appointments: Array.isArray(appointments) ? appointments.length : 0,
+      cloudClients: cloudClientCount,
     };
   }
 
@@ -593,7 +859,11 @@ window.StudioStorage = (function () {
     flushAll,
     onChange,
     migrateLocalToCloud,
+    reconcileToCloud,
     refreshFromCloud,
+    syncNow,
+    retryCloudConnection,
+    fetchCloudCounts,
     getCollectionCounts,
     exportLocalSnapshot,
   };

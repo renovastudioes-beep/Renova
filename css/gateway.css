@@ -834,19 +834,27 @@ body.gateway-touch .gateway-panel {
   opacity: 0;
 }
 
+.renova-gateway.is-expanding,
 .renova-gateway.is-navigating {
   pointer-events: none;
-  transition:
-    grid-template-columns var(--dur-open) var(--ease-open),
-    grid-template-rows var(--dur-open) var(--ease-open);
 }
 
-.renova-gateway.is-navigating-peptides {
-  grid-template-columns: 1fr 0fr !important;
+.renova-gateway.is-expanding .gateway-panel-veil {
+  transition: opacity 0.28s var(--ease-out);
 }
 
-.renova-gateway.is-navigating-hair {
-  grid-template-columns: 0fr 1fr !important;
+.renova-gateway.is-expanding-peptides .gateway-panel-hair,
+.renova-gateway.is-expanding-hair .gateway-panel-peptides {
+  opacity: 0.18 !important;
+  filter: blur(5px) saturate(0.75) !important;
+  transition: opacity 0.32s var(--ease-out), filter 0.38s var(--ease-out);
+}
+
+.renova-gateway.is-expanding-peptides .gateway-panel-peptides .gateway-stage,
+.renova-gateway.is-expanding-peptides .gateway-panel-peptides .gateway-panel-inner,
+.renova-gateway.is-expanding-hair .gateway-panel-hair .gateway-stage,
+.renova-gateway.is-expanding-hair .gateway-panel-hair .gateway-panel-inner {
+  transition: transform 0.45s var(--ease-open), opacity 0.35s var(--ease-out);
 }
 
 .renova-gateway.is-navigating .gateway-split-line,
@@ -869,7 +877,9 @@ body.gateway-touch .gateway-panel {
 }
 
 .renova-gateway.is-navigating-peptides .gateway-panel-peptides,
-.renova-gateway.is-navigating-hair .gateway-panel-hair {
+.renova-gateway.is-navigating-hair .gateway-panel-hair,
+.renova-gateway.is-expanding-peptides .gateway-panel-peptides,
+.renova-gateway.is-expanding-hair .gateway-panel-hair {
   z-index: 12 !important;
 }
 
@@ -1006,15 +1016,7 @@ body.gateway-opening.gateway-opening-ready::before {
     grid-template-rows: 50fr 50fr;
   }
 
-  .renova-gateway.is-navigating-peptides {
-    grid-template-rows: 1fr 0fr !important;
-    grid-template-columns: 1fr !important;
-  }
 
-  .renova-gateway.is-navigating-hair {
-    grid-template-rows: 0fr 1fr !important;
-    grid-template-columns: 1fr !important;
-  }
 
   .gateway-hero-center {
     width: 100%;

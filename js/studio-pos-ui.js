@@ -3591,16 +3591,26 @@ window.RenvoaStudioUI = (function () {
         <h2>Cloud sync</h2>
         <p class="studio-client-section-lead">Production mode stores clients, appointments, POS sales, and portal data in Supabase so every Mac, iPad, and phone sees the same records.</p>
         <dl class="studio-cloud-status">
-          <div><dt>Mode</dt><dd id="studioCloudModeLabel">${esc(window.StudioStorage?.getMode?.() || 'local')}</dd></div>
+          <div><dt>Mode</dt><dd id="studioCloudModeLabel">${esc(window.StudioStorage?.getMode?.() || 'local')}${window.StudioStorage?.getInitError?.() ? ` — ${esc(window.StudioStorage.getInitError())}` : ''}</dd></div>
           <div><dt>Workspace</dt><dd>${esc(window.RENVOA_CONFIG?.cloud?.workspaceId || 'onyx')}</dd></div>
-          <div><dt>Clients on this device</dt><dd>${S().getClients().length}</dd></div>
-          <div><dt>Appointments on this device</dt><dd>${S().getAppointments().length}</dd></div>
+          <div><dt>Clients on this device</dt><dd id="studioCloudClientCount">${S().getClients().length}</dd></div>
+          <div><dt>Clients in cloud</dt><dd id="studioCloudRemoteClientCount">${(() => {
+            const n = window.StudioStorage?.getCollectionCounts?.()?.cloudClients;
+            return n == null ? '—' : n;
+          })()}</dd></div>
+          <div><dt>Appointments on this device</dt><dd id="studioCloudApptCount">${S().getAppointments().length}</dd></div>
         </dl>
+        ${window.StudioStorage?.getMode?.() === 'local-fallback'
+          ? `<p class="admin-fine studio-cloud-offline-banner"><strong>Cloud offline on this device.</strong> You are viewing local data only. Other devices will not see changes until cloud reconnects.</p>`
+          : ''}
         ${window.StudioStorage?.isCloudEnabled?.()
-          ? `<p class="admin-fine">If counts differ between devices, open this page on the Mac with the most clients and tap <strong>Sync now</strong> or <strong>Merge &amp; upload</strong>. Data is union-merged — nothing is deleted unless you remove it in the portal.</p>
+          ? `<p class="admin-fine">If counts differ between devices, open this page on the device with the most clients and tap <strong>Merge &amp; upload</strong>, then hard-refresh other devices and tap <strong>Sync now</strong>. Data is union-merged — nothing is deleted unless you remove it in the portal.</p>
              <div class="studio-cloud-actions">
                <button type="button" class="btn-primary btn-sm" id="studioCloudSyncBtn">Sync now</button>
                <button type="button" class="btn-secondary btn-sm" id="studioCloudMigrateBtn">Merge &amp; upload this device</button>
+               ${window.StudioStorage?.getMode?.() === 'local-fallback'
+                 ? '<button type="button" class="btn-secondary btn-sm" id="studioCloudRetryBtn">Retry cloud connection</button>'
+                 : ''}
              </div>`
           : `<p class="admin-fine">Cloud is off. Set <code>RENVOA_CONFIG.cloud.enabled</code>, Supabase URL, and anon key in <code>js/config.js</code>, then run <code>supabase/schema.sql</code> in your Supabase project.</p>`}
       </section>`;
