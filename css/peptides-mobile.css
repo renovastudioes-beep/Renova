@@ -1,0 +1,321 @@
+/* ONYX Peptides — mobile layout (≤834px) */
+
+@media (max-width: 834px) {
+  .peptides-page {
+    overflow-x: clip;
+    max-width: 100%;
+  }
+
+  .peptides-page .ruo-banner {
+    padding: 8px max(12px, var(--safe-left)) 8px max(12px, var(--safe-right));
+    font-size: 11px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .peptides-page .global-nav .nav-content {
+    gap: 8px;
+  }
+
+  .peptides-page .nav-logo {
+    font-size: 14px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 42vw;
+  }
+
+  .peptides-page .hero {
+    min-height: auto;
+    padding-top: calc(var(--nav-height) + 28px);
+    padding-bottom: 20px;
+    overflow-x: clip;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .peptides-page .hero-content {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding-left: max(16px, var(--safe-left));
+    padding-right: max(16px, var(--safe-right));
+  }
+
+  .peptides-page .hero-eyebrow {
+    font-size: 15px;
+  }
+
+  .peptides-page .hero-title {
+    font-size: clamp(30px, 8.5vw, 44px);
+    line-height: 1.08;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: auto;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .peptides-page .hero-subtitle {
+    font-size: clamp(15px, 4vw, 19px);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0 2px;
+  }
+
+  .peptides-page .hero-ctas {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 4px;
+  }
+
+  .peptides-page .hero-ctas .link-cta {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    flex-wrap: wrap;
+  }
+
+  .peptides-page .hero-visual {
+    width: 100%;
+    max-width: min(100%, 300px);
+    height: min(260px, 42vh);
+    margin-top: 28px;
+    margin-left: auto;
+    margin-right: auto;
+    overflow: hidden;
+    padding: 0 max(8px, var(--safe-left)) 0 max(8px, var(--safe-right));
+    box-sizing: border-box;
+  }
+
+  .peptides-page .vial-scene {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .peptides-page .molecule-ring {
+    width: min(220px, 68vw);
+    height: min(220px, 68vw);
+  }
+
+  .peptides-page .vial-glow {
+    width: min(200px, 60vw);
+    height: min(200px, 60vw);
+  }
+
+  .peptides-page .trust-bar,
+  .peptides-page .promo-ribbon {
+    padding-left: max(16px, var(--safe-left));
+    padding-right: max(16px, var(--safe-right));
+    overflow-x: clip;
+  }
+
+  .peptides-page .trust-bar-inner {
+    gap: 10px 16px;
+  }
+
+  .peptides-page .trust-item {
+    font-size: 12px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .peptides-page .promo-text {
+    font-size: 13px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    padding: 0 4px;
+  }
+
+  .peptides-page .section-header {
+    padding: 56px max(16px, var(--safe-left)) 36px max(16px, var(--safe-right));
+  }
+
+  .peptides-page .section-header h2 {
+    font-size: clamp(28px, 7vw, 40px);
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .peptides-page .section-header p {
+    font-size: clamp(16px, 4vw, 19px);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    padding: 0 4px;
+  }
+
+  .peptides-page .goal-grid,
+  .peptides-page .product-grid {
+    padding-left: max(16px, var(--safe-left));
+    padding-right: max(16px, var(--safe-right));
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .peptides-page .goal-card {
+    padding: 20px 14px;
+    min-width: 0;
+  }
+
+  .peptides-page .goal-label {
+    font-size: 15px;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  .peptides-page .goal-sub {
+    font-size: 12px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+
+  .peptides-page .product-tile {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .peptides-page .tile-content {
+    padding: 20px 12px 20px 18px;
+    min-width: 0;
+  }
+
+  .peptides-page .tile-content h3 {
+    font-size: clamp(17px, 4.5vw, 22px);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  .peptides-page .tile-tagline,
+  .peptides-page .tile-price {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  .peptides-page .tile-ctas {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .peptides-page .tile-ctas .link-cta {
+    white-space: normal;
+    flex-wrap: wrap;
+  }
+
+  .peptides-page .tile-visual {
+    flex: 0 0 clamp(88px, 26vw, 110px);
+    min-width: 0;
+  }
+
+  .peptides-page .goal-overlay {
+    padding: 56px max(12px, var(--safe-left)) 20px max(12px, var(--safe-right));
+  }
+
+  .peptides-page .goal-overlay-panel {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .peptides-page .feature-hero {
+    padding: 64px max(16px, var(--safe-left)) 64px max(16px, var(--safe-right));
+    gap: 36px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .peptides-page .feature-hero h2 {
+    font-size: clamp(28px, 7vw, 40px);
+  }
+
+  .peptides-page .feature-subtitle {
+    font-size: clamp(16px, 4vw, 19px);
+    padding: 0 4px;
+  }
+
+  .peptides-page .feature-hero-visual {
+    width: 100%;
+    max-width: 100%;
+    padding: 0 4px;
+    box-sizing: border-box;
+  }
+
+  .peptides-page .bento-section,
+  .peptides-page .compare-section,
+  .peptides-page .faq-section,
+  .peptides-page .email-section,
+  .peptides-page .disclaimer-section {
+    overflow-x: clip;
+    max-width: 100%;
+  }
+
+  .peptides-page .feature-hero h2,
+  .peptides-page .bento-card h3 {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .peptides-page .feature-subtitle,
+  .peptides-page .bento-card p,
+  .peptides-page .faq-item p,
+  .peptides-page .disclaimer-inner p {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .peptides-page .global-footer {
+    overflow-x: clip;
+    padding-left: max(16px, var(--safe-left));
+    padding-right: max(16px, var(--safe-right));
+  }
+
+  .peptides-page .product-modal,
+  .peptides-page .modal-content {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .peptides-page .modal-simple-head h2,
+  .peptides-page .modal-tagline,
+  .peptides-page .modal-lead {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
+@media (max-width: 390px) {
+  .peptides-page .hero-title {
+    font-size: clamp(26px, 8vw, 34px);
+  }
+
+  .peptides-page .hero-subtitle {
+    font-size: 15px;
+  }
+
+  .peptides-page .tile-content {
+    padding: 18px 10px 18px 14px;
+  }
+
+  .peptides-page .tile-visual {
+    flex-basis: 80px;
+  }
+}

@@ -570,9 +570,9 @@
 
   // Hero rotation
   const HERO_SLIDES = [
-    { id: 'semaglutide', eyebrow: 'Featured', title: 'Semaglutide.<br>GLP-1 analog.', sub: 'Research-grade lyophilized vial — HPLC verified for in-vitro metabolic pathway studies.', label: 'Semaglutide' },
+    { id: 'semaglutide', eyebrow: 'Featured', title: 'Semaglutide.<br>GLP-1 analog.', sub: 'Research-grade lyophilized vial — HPLC verified.', label: 'Semaglutide' },
     { id: 'bpc-157', eyebrow: 'Popular', title: 'BPC-157.<br>Pentadecapeptide.', sub: '≥99% purity. HPLC verified. 5mg & 10mg lyophilized vials.', label: 'BPC-157' },
-    { id: 'tirzepatide', eyebrow: 'New', title: 'Tirzepatide.<br>Dual pathway analog.', sub: 'GIP/GLP-1 receptor analog for in-vitro endocrine signaling research.', label: 'Tirzepatide' },
+    { id: 'tirzepatide', eyebrow: 'New', title: 'Tirzepatide.<br>Dual pathway analog.', sub: 'Dual GIP/GLP-1 analog — HPLC verified lyophilized vial.', label: 'Tirzepatide' },
   ];
   let heroIndex = 0;
   const heroEyebrow = $('#heroEyebrow');
