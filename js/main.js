@@ -79,7 +79,7 @@
     const badge = cfg.badge ? `<span class="tile-badge">${cfg.badge}</span>` : '';
     const cats = (p.categories || []).join(' ');
     return `
-      <article class="product-tile ${cfg.theme} reveal" data-product="${id}" data-categories="${cats}">
+      <article class="product-tile ${cfg.theme} reveal visible" data-product="${id}" data-categories="${cats}">
         <div class="tile-content">
           ${badge}
           <h3>${p.name}</h3>
@@ -502,28 +502,28 @@
     }
   });
 
-  filterClear.addEventListener('click', clearGoalFilter);
-  goalOverlayClose.addEventListener('click', closeGoalOverlay);
-  goalOverlayBackdrop.addEventListener('click', closeGoalOverlay);
+  filterClear?.addEventListener('click', clearGoalFilter);
+  goalOverlayClose?.addEventListener('click', closeGoalOverlay);
+  goalOverlayBackdrop?.addEventListener('click', closeGoalOverlay);
 
-  cartBtn.addEventListener('click', openCart);
-  cartClose.addEventListener('click', closeCart);
-  cartOverlay.addEventListener('click', closeCart);
-  searchBtn.addEventListener('click', openSearch);
-  searchClose.addEventListener('click', closeSearch);
-  searchOverlay.addEventListener('click', (e) => {
+  cartBtn?.addEventListener('click', openCart);
+  cartClose?.addEventListener('click', closeCart);
+  cartOverlay?.addEventListener('click', closeCart);
+  searchBtn?.addEventListener('click', openSearch);
+  searchClose?.addEventListener('click', closeSearch);
+  searchOverlay?.addEventListener('click', (e) => {
     if (e.target === searchOverlay) closeSearch();
   });
-  searchInput.addEventListener('input', (e) => renderSearchResults(e.target.value));
-  modalClose.addEventListener('click', closeModal);
-  modalOverlay.addEventListener('click', closeModal);
+  searchInput?.addEventListener('input', (e) => renderSearchResults(e.target.value));
+  modalClose?.addEventListener('click', closeModal);
+  modalOverlay?.addEventListener('click', closeModal);
 
-  navHamburger.addEventListener('click', () => {
-    navLinks.classList.toggle('mobile-open');
+  navHamburger?.addEventListener('click', () => {
+    navLinks?.classList.toggle('mobile-open');
   });
 
   window.addEventListener('scroll', () => {
-    nav.classList.toggle('scrolled', window.scrollY > 10);
+    nav?.classList.toggle('scrolled', window.scrollY > 10);
   }, { passive: true });
 
   const revealObserver = new IntersectionObserver(

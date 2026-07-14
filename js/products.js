@@ -1,4 +1,4 @@
-const GOAL_CATEGORIES = {
+var GOAL_CATEGORIES = {
   'metabolic-research': {
     id: 'metabolic-research',
     label: 'Metabolic Research Compounds',
@@ -31,7 +31,7 @@ const GOAL_CATEGORIES = {
   },
 };
 
-const GOAL_ALIASES = {
+var GOAL_ALIASES = {
   'weight-loss': 'metabolic-research',
   'tissue-repair': 'tissue-research',
   'growth-hormone': 'tissue-research',
@@ -87,7 +87,7 @@ function vialProduct({
   };
 }
 
-const PRODUCTS = {
+var PRODUCTS = {
   semaglutide: vialProduct({
     id: 'semaglutide', name: 'Semaglutide', price: 124.5, cogs: 5.6,
     tagline: 'GLP-1 analog — lyophilized research vial',
@@ -226,7 +226,7 @@ const PRODUCTS = {
 };
 
 /** Storefront display order — matches profitability model groupings */
-const PRODUCT_CATALOG_ORDER = [
+var PRODUCT_CATALOG_ORDER = [
   'semaglutide', 'tirzepatide', 'retatrutide', 'tesamorelin', 'aod-9604', 'mots-c',
   'gh-stack', 'sermorelin', 'bpc-157', 'tb-500', 'recovery-stack', 'igf-1-lr3',
   'ghk-cu', 'glow-blend',
