@@ -24,7 +24,7 @@ window.RenvoaPOS = (function () {
         variants[k] = {
           ...v,
           price: o.variants?.[k]?.price ?? v.price,
-          cogs: o.variants?.[k]?.cogs ?? (window.RenvoaAdmin?.LANDED_COGS?.[p.id] || 0),
+          cogs: o.variants?.[k]?.cogs ?? o.cogs ?? (window.RenvoaAdmin?.LANDED_COGS?.[p.id] || 0),
         };
       });
       return {

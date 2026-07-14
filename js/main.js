@@ -42,16 +42,59 @@
 
   let activeGoal = null;
 
-  const TILE_CONFIG = {
-    'tb-500':         { theme: 'tile-dark',     visual: 'vial-tb',   badge: 'Popular', tagline: 'Synthetic heptapeptide (LKKTETQ).<br>5mg lyophilized vial.', light: true },
-    'recovery-stack': { theme: 'tile-gradient', visual: 'vial-bpc',  badge: 'Pairing', tagline: 'BPC-157 5mg + TB-500 5mg.<br>Commonly studied pairing.', light: true },
-    'gh-stack':       { theme: 'tile-accent',   visual: 'vial-ipa',  badge: 'Pairing', tagline: 'Ipamorelin + CJC-1295.<br>Commonly studied pairing.', light: true },
-    'bpc-157':        { theme: 'tile-light',    visual: 'vial-bpc',  tagline: 'Pentadecapeptide.<br>5mg &amp; 10mg lyophilized vials.' },
-    'semaglutide':    { theme: 'tile-gradient', visual: 'vial-sema', badge: 'New', tagline: 'GLP-1 analog.<br>Research-grade 2mg.', light: true },
-    'ipamorelin':     { theme: 'tile-light',    visual: 'vial-ipa',  tagline: 'Synthetic pentapeptide.<br>2mg lyophilized vial.' },
-    'cjc-1295':       { theme: 'tile-dark',     visual: 'vial-cjc',  tagline: 'Modified GHRH(1-29) peptide.<br>2mg lyophilized vial.', light: true },
-    'ghk-cu':         { theme: 'tile-accent',   visual: 'vial-ghk',  tagline: 'Copper(II)-GHK tripeptide.<br>50mg lyophilized vial.', light: true },
+  const TILE_THEMES = ['tile-light', 'tile-dark', 'tile-gradient', 'tile-accent'];
+  const TILE_VISUALS = {
+    semaglutide: 'vial-sema', tirzepatide: 'vial-sema', retatrutide: 'vial-sema',
+    'tb-500': 'vial-tb', 'bpc-157': 'vial-bpc', 'gh-stack': 'vial-ipa',
+    sermorelin: 'vial-cjc', 'ghk-cu': 'vial-ghk', tesamorelin: 'vial-cjc',
   };
+
+  function tileTaglineHtml(tagline) {
+    return String(tagline || '').replace(' — ', '.<br>');
+  }
+
+  function getTileConfig(id, index) {
+    const p = PRODUCTS[id];
+    const theme = TILE_THEMES[index % TILE_THEMES.length];
+    const light = theme !== 'tile-light';
+    return {
+      theme,
+      visual: TILE_VISUALS[id] || 'vial-bpc',
+      badge: p?.featured ? 'Featured' : (p?.isBundle ? 'Pairing' : ''),
+      tagline: tileTaglineHtml(p?.tagline),
+      light,
+    };
+  }
+
+  function renderProductTile(id, index) {
+    const p = PRODUCTS[id];
+    const cfg = getTileConfig(id, index);
+    if (!p) return '';
+    const ctaClass = cfg.light ? 'link-cta light' : 'link-cta';
+    const badge = cfg.badge ? `<span class="tile-badge">${cfg.badge}</span>` : '';
+    const cats = (p.categories || []).join(' ');
+    return `
+      <article class="product-tile ${cfg.theme} reveal" data-product="${id}" data-categories="${cats}">
+        <div class="tile-content">
+          ${badge}
+          <h3>${p.name}</h3>
+          <p class="tile-tagline">${cfg.tagline}</p>
+          <p class="tile-price">${SF.formatStartingAt(p)}</p>
+          <div class="tile-ctas">
+            <a href="#" class="${ctaClass}" data-add="${id}">${SF.publicCtaLabel()} <span class="chevron">›</span></a>
+            <a href="#" class="${ctaClass}" data-detail="${id}">Learn more <span class="chevron">›</span></a>
+          </div>
+        </div>
+        <div class="tile-visual ${cfg.visual}"></div>
+      </article>`;
+  }
+
+  function renderProductGrid() {
+    const grid = $('#productGrid');
+    if (!grid) return;
+    const order = window.PRODUCT_CATALOG_ORDER || Object.keys(PRODUCTS);
+    grid.innerHTML = order.map(renderProductTile).join('');
+  }
 
   function resolveGoalId(goalId) {
     return GOAL_ALIASES?.[goalId] || goalId;
@@ -178,193 +221,80 @@
     document.body.style.overflow = '';
   }
 
-  function initModalTabs() {
-    const tabs = $$('.modal-tab');
-    const panels = $$('.modal-panel');
-    tabs.forEach((tab) => {
-      tab.addEventListener('click', () => {
-        const target = tab.dataset.tab;
-        tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === target));
-        panels.forEach((p) => p.classList.toggle('active', p.dataset.panel === target));
-      });
-    });
-  }
-
   function getProductFull(id) {
     return { ...PRODUCTS[id], ...(PRODUCT_DETAILS[id] || {}) };
+  }
+
+  function getRelatedProductIds(p) {
+    const explicit = (p.related || []).filter((rid) => PRODUCTS[rid] && rid !== p.id);
+    if (explicit.length) return explicit.slice(0, 3);
+    const cats = new Set(p.categories || []);
+    return (window.PRODUCT_CATALOG_ORDER || Object.keys(PRODUCTS))
+      .filter((rid) => rid !== p.id && PRODUCTS[rid]?.categories?.some((c) => cats.has(c)))
+      .slice(0, 3);
+  }
+
+  function modalSpecRow(label, value) {
+    if (!value || value === '—') return '';
+    return `<div class="modal-spec"><label>${label}</label><span>${value}</span></div>`;
   }
 
   function openModal(id) {
     const p = getProductFull(id);
     if (!p) return;
 
-    const areaTags = (p.researchAreas || []).map((a) => `<span class="modal-tag">${a}</span>`).join('');
-    const highlights = (p.researchHighlights || []).map((h) => `<li>${h}</li>`).join('');
     const categoryLabels = (p.categories || [])
       .map((c) => GOAL_CATEGORIES[c]?.label)
       .filter(Boolean)
       .map((l) => `<span class="modal-category">${l}</span>`)
       .join('');
 
-    const gallery = (p.gallery || [])
-      .map((g) => `
-        <figure class="modal-gallery-item">
-          <img src="${g.src}" alt="${g.alt}" loading="lazy">
-          <figcaption>${g.caption}</figcaption>
-        </figure>`)
-      .join('');
+    const relatedIds = getRelatedProductIds(p);
+    const related = relatedIds.map((rid) => {
+      const r = PRODUCTS[rid];
+      return `<button type="button" class="modal-related-chip" data-detail="${rid}" style="--chip-color:${r.color}">${r.name}</button>`;
+    }).join('');
 
-    const useCases = (p.useCases || [])
-      .map((u) => `
-        <article class="modal-usecase">
-          <div class="modal-usecase-img">
-            <img src="${u.image}" alt="${u.alt}" loading="lazy">
-          </div>
-          <div class="modal-usecase-body">
-            <h4>${u.title}</h4>
-            <p>${u.description}</p>
-          </div>
-        </article>`)
-      .join('');
-
-    const deepDive = (p.deepDive || [])
-      .map((d) => `
-        <div class="modal-deep-block">
-          <h4>${d.heading}</h4>
-          <p>${d.body}</p>
-        </div>`)
-      .join('');
-
-    const studyModels = (p.studyModels || []).map((m) => `<span class="modal-tag">${m}</span>`).join('');
-    const citations = (p.citations || [])
-      .map((c) => `<li><strong>${c.text}</strong><span>${c.source}</span></li>`)
-      .join('');
-
-    const faq = (p.faq || [])
-      .map((f) => `
-        <details class="modal-faq-item">
-          <summary>${f.q}</summary>
-          <p>${f.a}</p>
-        </details>`)
-      .join('');
-
-    const steps = (p.reconstitutionSteps || [])
-      .map((s, i) => `<li><span class="step-num">${i + 1}</span>${s}</li>`)
-      .join('');
-
-    const related = (p.related || [])
-      .filter((rid) => PRODUCTS[rid])
-      .map((rid) => {
-        const r = PRODUCTS[rid];
-        return `<button type="button" class="modal-related-chip" data-detail="${rid}" style="--chip-color:${r.color}">${r.name}</button>`;
-      })
-      .join('');
+    const coaLine = p.currentLot
+      ? `<p class="modal-lot">Lot <a href="coa.html?batch=${p.currentLot}" class="modal-lot-link">${p.currentLot}</a> · ${p.lotPurity || p.purity} purity · <a href="coa.html" class="modal-lot-link">COA lookup</a></p>`
+      : '<p class="modal-lot"><a href="coa.html" class="modal-lot-link">COA lookup</a> · batch-specific certificate included</p>';
 
     modalContent.innerHTML = `
-      <div class="modal-hero-banner" style="--hero-accent:${p.color}">
-        <img class="modal-hero-img" src="${p.heroImage || 'images/products/lab-research.jpg'}" alt="${p.name} research context">
-        <div class="modal-hero-overlay"></div>
-        <div class="modal-hero-text">
-          <p class="modal-hero-eyebrow">${p.heroCaption || 'Laboratory research'}</p>
+      <div class="modal-simple-head" style="--hero-accent:${p.color}">
+        <div class="modal-simple-accent" aria-hidden="true"></div>
+        <div class="modal-simple-head-inner">
+          ${categoryLabels ? `<div class="modal-categories">${categoryLabels}</div>` : ''}
           <h2>${p.name}</h2>
           <p class="modal-tagline">${p.tagline}</p>
           <p class="modal-price" id="modalLivePrice">${SF.formatStartingAt(p)}</p>
-          ${p.currentLot ? `<p class="modal-lot">Current lot: <a href="coa.html?batch=${p.currentLot}" class="modal-lot-link">${p.currentLot}</a> · ${p.lotPurity || p.purity} purity</p>` : ''}
-          ${categoryLabels ? `<div class="modal-categories">${categoryLabels}</div>` : ''}
+          ${coaLine}
         </div>
       </div>
 
-      <div class="modal-body-wrap">
-        <nav class="modal-tabs modal-tabs-sticky" role="tablist">
-          <button class="modal-tab active" data-tab="overview" type="button" role="tab">Overview</button>
-          <button class="modal-tab" data-tab="research" type="button" role="tab">Research</button>
-          <button class="modal-tab" data-tab="gallery" type="button" role="tab">In the Lab</button>
-          <button class="modal-tab" data-tab="specs" type="button" role="tab">Specifications</button>
-          <button class="modal-tab" data-tab="protocol" type="button" role="tab">Handling</button>
-        </nav>
+      <div class="modal-body-wrap modal-body-simple">
+        <p class="modal-lead">${p.longDescription || p.description}</p>
 
-        <div class="modal-panels">
-          <div class="modal-panel active" data-panel="overview" role="tabpanel">
-            <p class="modal-lead">${p.longDescription || p.description}</p>
-            <div class="modal-split">
-              <div class="modal-split-text">
-                <h4 class="modal-section-title">Chemical Profile</h4>
-                <p class="modal-text">${p.mechanism || ''}</p>
-                <h4 class="modal-section-title">Research Areas</h4>
-                <div class="modal-tags">${areaTags}</div>
-              </div>
-              <div class="modal-split-img">
-                <img src="${(p.gallery && p.gallery[0]?.src) || p.heroImage}" alt="${p.name} research" loading="lazy">
-              </div>
-            </div>
-            <h4 class="modal-section-title">Research Applications</h4>
-            <div class="modal-usecases">${useCases}</div>
-          </div>
-
-          <div class="modal-panel" data-panel="research" role="tabpanel">
-            <div class="modal-deep-dive">${deepDive}</div>
-            <h4 class="modal-section-title">Key Research Highlights</h4>
-            <ul class="modal-list">${highlights}</ul>
-            <h4 class="modal-section-title">Common Study Models</h4>
-            <div class="modal-tags">${studyModels}</div>
-            <h4 class="modal-section-title">Selected References</h4>
-            <ul class="modal-citations">${citations}</ul>
-            <p class="modal-disclaimer-inline">All citations refer to preclinical and in-vitro research. Not intended for human or animal use.</p>
-          </div>
-
-          <div class="modal-panel" data-panel="gallery" role="tabpanel">
-            <p class="modal-gallery-intro">How qualified laboratories use ${p.name} in controlled in-vitro research settings.</p>
-            <div class="modal-gallery">${gallery}</div>
-            <div class="modal-gallery-disclaimer">
-              <strong>Research use only.</strong> Images depict research contexts and laboratory applications. ONYX Peptides products are not intended for human consumption or self-administration.
-            </div>
-          </div>
-
-          <div class="modal-panel" data-panel="specs" role="tabpanel">
-            <div class="modal-specs">
-              <div class="modal-spec"><label>Purity (HPLC)</label><span>${p.purity}</span></div>
-              <div class="modal-spec"><label>Identity (MS)</label><span>Confirmed</span></div>
-              <div class="modal-spec"><label>Form</label><span>${p.form}</span></div>
-              <div class="modal-spec"><label>Available Sizes</label><span>${p.sizes.join(', ')}</span></div>
-              <div class="modal-spec"><label>Storage</label><span>${p.storage}</span></div>
-              <div class="modal-spec"><label>Endotoxins</label><span>&lt;0.1 EU/mg</span></div>
-              <div class="modal-spec"><label>CAS Number</label><span>${p.cas}</span></div>
-              <div class="modal-spec"><label>Molecular Weight</label><span>${p.molecularWeight || '—'}</span></div>
-              <div class="modal-spec modal-spec-wide"><label>Sequence</label><span>${p.sequence}</span></div>
-            </div>
-            <div class="modal-testing-card">
-              <h4>Quality Testing</h4>
-              <p>Every batch is independently verified by third-party HPLC and mass spectrometry. A batch-specific Certificate of Analysis ships with your order.</p>
-              <div class="modal-testing-grid">
-                <span>✓ HPLC purity</span>
-                <span>✓ MS identity</span>
-                <span>✓ Endotoxin screen</span>
-                <span>✓ COA included</span>
-              </div>
-            </div>
-            <h4 class="modal-section-title">Frequently Asked Questions</h4>
-            <div class="modal-faq">${faq}</div>
-          </div>
-
-          <div class="modal-panel" data-panel="protocol" role="tabpanel">
-            <h4 class="modal-section-title">Laboratory Handling</h4>
-            <ol class="modal-steps">${steps}</ol>
-            <h4 class="modal-section-title">Preparation Notes</h4>
-            <p class="modal-text">${p.reconstitution || ''}</p>
-            <h4 class="modal-section-title">Handling &amp; Storage</h4>
-            <p class="modal-text">${p.handling || p.storage}</p>
-            <div class="modal-protocol-note">
-              <strong>Research use only.</strong> For in-vitro laboratory experimentation by qualified professionals. Not for human or animal consumption.
-            </div>
-          </div>
+        <div class="modal-specs modal-specs-compact">
+          ${modalSpecRow('Purity (HPLC)', p.purity)}
+          ${modalSpecRow('Form', p.form)}
+          ${modalSpecRow('Format', (p.sizes || []).join(', '))}
+          ${modalSpecRow('Identity (MS)', 'Confirmed')}
+          ${modalSpecRow('Endotoxins', '&lt;0.1 EU/mg')}
+          ${modalSpecRow('CAS', p.cas)}
+          ${modalSpecRow('Sequence', p.sequence)}
         </div>
 
-        ${related ? `<div class="modal-related"><h4>Related Peptides</h4><div class="modal-related-chips">${related}</div></div>` : ''}
+        <p class="modal-simple-quality">HPLC and mass spectrometry verified · COA included with every order.</p>
 
-        <div class="modal-actions">
+        <div class="modal-protocol-note modal-protocol-note-compact">
+          <strong>Research use only.</strong> For in-vitro laboratory research by qualified personnel only.
+        </div>
+
+        ${related ? `<div class="modal-related"><h4>Also in this category</h4><div class="modal-related-chips">${related}</div></div>` : ''}
+
+        <div class="modal-actions modal-actions-simple">
           ${buildSizeSelector(p, p.defaultVariant)}
           <button class="btn-primary" id="modalAddBtn" data-add="${p.id}">${SF.publicCtaLabel()}</button>
-          <a href="product.html?p=${p.id}" class="btn-secondary">Share product</a>
         </div>
       </div>
       <div class="modal-sticky-bar" id="modalStickyBar">
@@ -375,7 +305,6 @@
     `;
 
     selectedModalSize = p.defaultVariant;
-    initModalTabs();
     $('#modalSize')?.addEventListener('change', () => updateModalPrice(p));
     updateModalPrice(p);
     const modalScroll = $('#modalScroll');
@@ -394,10 +323,10 @@
     document.body.style.overflow = '';
   }
 
-  function renderGoalTile(pid) {
+  function renderGoalTile(pid, index = 0) {
     const p = PRODUCTS[pid];
-    const cfg = TILE_CONFIG[pid];
-    if (!p || !cfg) return '';
+    const cfg = getTileConfig(pid, index);
+    if (!p) return '';
     const ctaClass = cfg.light ? 'link-cta light' : 'link-cta';
     const badge = cfg.badge ? `<span class="tile-badge">${cfg.badge}</span>` : '';
     return `
@@ -433,7 +362,7 @@
     });
 
     goalOverlayTitle.textContent = goal.label;
-    goalOverlayTiles.innerHTML = goal.products.map(renderGoalTile).join('');
+    goalOverlayTiles.innerHTML = goal.products.map((pid, i) => renderGoalTile(pid, i)).join('');
 
     goalOverlay.classList.add('active');
     goalOverlay.setAttribute('aria-hidden', 'false');
@@ -626,9 +555,9 @@
 
   // Hero rotation
   const HERO_SLIDES = [
-    { id: 'bpc-157', eyebrow: 'Featured', title: 'BPC-157.<br>Research-grade pentadecapeptide.', sub: '≥99% purity. HPLC verified. 5mg &amp; 10mg lyophilized vials for in-vitro research.', price: 49, label: 'BPC-157' },
-    { id: 'semaglutide', eyebrow: 'New', title: 'Semaglutide.<br>GLP-1 analog.', sub: 'Research-grade 2mg lyophilized vial for qualified metabolic pathway studies.', price: 89, label: 'Semaglutide' },
-    { id: 'tb-500', eyebrow: 'Popular', title: 'TB-500.<br>Synthetic heptapeptide.', sub: 'LKKTETQ sequence — 5mg lyophilized vial for in-vitro laboratory research.', price: 65, label: 'TB-500' },
+    { id: 'semaglutide', eyebrow: 'Featured', title: 'Semaglutide.<br>GLP-1 analog.', sub: 'Research-grade lyophilized vial — HPLC verified for in-vitro metabolic pathway studies.', label: 'Semaglutide' },
+    { id: 'bpc-157', eyebrow: 'Popular', title: 'BPC-157.<br>Pentadecapeptide.', sub: 'Lyophilized research vial with batch-specific COA for qualified laboratory use.', label: 'BPC-157' },
+    { id: 'tirzepatide', eyebrow: 'New', title: 'Tirzepatide.<br>Dual pathway analog.', sub: 'GIP/GLP-1 receptor analog for in-vitro endocrine signaling research.', label: 'Tirzepatide' },
   ];
   let heroIndex = 0;
   const heroEyebrow = $('#heroEyebrow');
@@ -674,6 +603,7 @@
     window.RenvoaTrack?.('subscribe', { method: 'email' });
   });
 
+  renderProductGrid();
   updateCartUI();
   syncProductTilePrices();
 })();

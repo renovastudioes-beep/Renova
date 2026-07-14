@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>ONYX Peptides — Research Peptides</title>
   <!-- Peptide store — enter via index.html gateway -->
-  <meta name="description" content="High-purity research peptides for laboratory use. Third-party tested. COA included. Research use only — not for human consumption.">
+  <meta name="description" content="High-purity research peptides for laboratory use. Third-party tested. COA included. Research use only.">
   <meta property="og:title" content="ONYX Peptides — Research Peptides">
   <meta property="og:description" content="HPLC verified research peptides. Cold-chain shipping. COA on every order.">
   <meta property="og:type" content="website">
-  <link rel="stylesheet" href="css/styles.css?v=70">
+  <link rel="stylesheet" href="css/styles.css?v=71">
   <link rel="stylesheet" href="css/mobile-device.css?v=1">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"Store","name":"ONYX Peptides","description":"Research-grade peptides for laboratory use","url":"https://onyx.com"}
@@ -19,7 +19,7 @@
 </head>
 <body>
   <div class="ruo-banner" role="note">
-    <strong>Research Use Only (RUO).</strong> Products are for in-vitro laboratory research by qualified personnel — not for human or animal consumption, diagnosis, or treatment.
+    <strong>Research Use Only (RUO).</strong> Products are for in-vitro laboratory research by qualified personnel only.
   </div>
   <!-- Global Nav -->
   <nav class="global-nav" id="globalNav">
@@ -152,6 +152,20 @@
         <span class="goal-label">Matrix Research</span>
         <span class="goal-sub">Collagen &amp; ECM assays</span>
       </button>
+      <button class="goal-card" data-goal="cognitive-research" type="button">
+        <span class="goal-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v1.2a6 6 0 0 1 3.9 10.6l1.4 1.4a1 1 0 0 1-1.4 1.4l-1.1-1.1A6 6 0 0 1 6 12.5V4.5A2.5 2.5 0 0 1 8.5 2h1z"/></svg>
+        </span>
+        <span class="goal-label">Cognitive Research</span>
+        <span class="goal-sub">Neuropeptide signaling</span>
+      </button>
+      <button class="goal-card" data-goal="longevity-research" type="button">
+        <span class="goal-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </span>
+        <span class="goal-label">Longevity Research</span>
+        <span class="goal-sub">Cellular &amp; immune models</span>
+      </button>
     </div>
     <div class="goal-overlay" id="goalOverlay" aria-hidden="true">
       <div class="goal-overlay-backdrop" id="goalOverlayBackdrop"></div>
@@ -178,115 +192,7 @@
       <span class="filter-label" id="filterLabel">Showing: Research area</span>
       <button class="filter-clear" id="filterClear" type="button">Show all peptides</button>
     </div>
-    <div class="product-grid" id="productGrid">
-      <article class="product-tile tile-dark reveal" data-product="tb-500" data-categories="tissue-research">
-        <div class="tile-content">
-          <span class="tile-badge">Popular</span>
-          <h3>TB-500</h3>
-          <p class="tile-tagline">Synthetic heptapeptide (LKKTETQ).<br>5mg lyophilized vial.</p>
-          <p class="tile-price">Starting at $65</p>
-          <div class="tile-ctas">
-            <a href="#" class="link-cta light" data-add="tb-500">Add to bag <span class="chevron">›</span></a>
-            <a href="#" class="link-cta light" data-detail="tb-500">Learn more <span class="chevron">›</span></a>
-          </div>
-        </div>
-        <div class="tile-visual vial-tb"></div>
-      </article>
-
-      <article class="product-tile tile-light reveal" data-product="bpc-157" data-categories="tissue-research matrix-research">
-        <div class="tile-content">
-          <h3>BPC-157</h3>
-          <p class="tile-tagline">Pentadecapeptide.<br>5mg &amp; 10mg lyophilized vials.</p>
-          <p class="tile-price">Starting at $49</p>
-          <div class="tile-ctas">
-            <a href="#" class="link-cta" data-add="bpc-157">Add to bag <span class="chevron">›</span></a>
-            <a href="#" class="link-cta" data-detail="bpc-157">Learn more <span class="chevron">›</span></a>
-          </div>
-        </div>
-        <div class="tile-visual vial-bpc"></div>
-      </article>
-
-      <article class="product-tile tile-gradient reveal" data-product="semaglutide" data-categories="metabolic-research">
-        <div class="tile-content">
-          <span class="tile-badge">New</span>
-          <h3>Semaglutide</h3>
-          <p class="tile-tagline">GLP-1 analog.<br>Research-grade 2mg.</p>
-          <p class="tile-price">Starting at $89</p>
-          <div class="tile-ctas">
-            <a href="#" class="link-cta light" data-add="semaglutide">Add to bag <span class="chevron">›</span></a>
-            <a href="#" class="link-cta light" data-detail="semaglutide">Learn more <span class="chevron">›</span></a>
-          </div>
-        </div>
-        <div class="tile-visual vial-sema"></div>
-      </article>
-
-      <article class="product-tile tile-light reveal" data-product="ipamorelin" data-categories="endocrine-research metabolic-research">
-        <div class="tile-content">
-          <h3>Ipamorelin</h3>
-          <p class="tile-tagline">Synthetic pentapeptide.<br>2mg lyophilized vial.</p>
-          <p class="tile-price">Starting at $39</p>
-          <div class="tile-ctas">
-            <a href="#" class="link-cta" data-add="ipamorelin">Add to bag <span class="chevron">›</span></a>
-            <a href="#" class="link-cta" data-detail="ipamorelin">Learn more <span class="chevron">›</span></a>
-          </div>
-        </div>
-        <div class="tile-visual vial-ipa"></div>
-      </article>
-
-      <article class="product-tile tile-dark reveal" data-product="cjc-1295" data-categories="endocrine-research">
-        <div class="tile-content">
-          <h3>CJC-1295</h3>
-          <p class="tile-tagline">Modified GHRH(1-29) peptide.<br>2mg lyophilized vial.</p>
-          <p class="tile-price">Starting at $45</p>
-          <div class="tile-ctas">
-            <a href="#" class="link-cta light" data-add="cjc-1295">Add to bag <span class="chevron">›</span></a>
-            <a href="#" class="link-cta light" data-detail="cjc-1295">Learn more <span class="chevron">›</span></a>
-          </div>
-        </div>
-        <div class="tile-visual vial-cjc"></div>
-      </article>
-
-      <article class="product-tile tile-accent reveal" data-product="ghk-cu" data-categories="matrix-research">
-        <div class="tile-content">
-          <h3>GHK-Cu</h3>
-          <p class="tile-tagline">Copper(II)-GHK tripeptide.<br>50mg lyophilized vial.</p>
-          <p class="tile-price">Starting at $35</p>
-          <div class="tile-ctas">
-            <a href="#" class="link-cta light" data-add="ghk-cu">Add to bag <span class="chevron">›</span></a>
-            <a href="#" class="link-cta light" data-detail="ghk-cu">Learn more <span class="chevron">›</span></a>
-          </div>
-        </div>
-        <div class="tile-visual vial-ghk"></div>
-      </article>
-
-      <article class="product-tile tile-gradient reveal" data-product="recovery-stack" data-categories="tissue-research">
-        <div class="tile-content">
-          <span class="tile-badge">Pairing</span>
-          <h3>BPC-157 + TB-500 Pairing</h3>
-          <p class="tile-tagline">BPC-157 5mg + TB-500 5mg.<br>Commonly studied pairing.</p>
-          <p class="tile-price">Starting at $99</p>
-          <div class="tile-ctas">
-            <a href="#" class="link-cta light" data-add="recovery-stack">Add to bag <span class="chevron">›</span></a>
-            <a href="#" class="link-cta light" data-detail="recovery-stack">Learn more <span class="chevron">›</span></a>
-          </div>
-        </div>
-        <div class="tile-visual vial-bpc"></div>
-      </article>
-
-      <article class="product-tile tile-accent reveal" data-product="gh-stack" data-categories="endocrine-research">
-        <div class="tile-content">
-          <span class="tile-badge">Pairing</span>
-          <h3>Ipamorelin + CJC-1295 Pairing</h3>
-          <p class="tile-tagline">Ipamorelin + CJC-1295.<br>Commonly studied pairing.</p>
-          <p class="tile-price">Starting at $72</p>
-          <div class="tile-ctas">
-            <a href="#" class="link-cta light" data-add="gh-stack">Add to bag <span class="chevron">›</span></a>
-            <a href="#" class="link-cta light" data-detail="gh-stack">Learn more <span class="chevron">›</span></a>
-          </div>
-        </div>
-        <div class="tile-visual vial-ipa"></div>
-      </article>
-    </div>
+    <div class="product-grid" id="productGrid"></div>
   </section>
 
   <!-- Full-width Feature Section -->
@@ -371,61 +277,11 @@
     </div>
   </section>
 
-  <!-- Comparison Section -->
+  <!-- Pricing note -->
   <section class="compare-section">
     <div class="section-header reveal">
-      <h2>Compare peptides.</h2>
-      <p>Find the right compound for your research.</p>
-    </div>
-    <div class="compare-table-wrapper reveal">
-      <table class="compare-table">
-        <thead>
-          <tr>
-            <th></th>
-            <th>BPC-157</th>
-            <th>TB-500</th>
-            <th>Semaglutide</th>
-            <th>Ipamorelin</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Purity</td>
-            <td>≥99%</td>
-            <td>≥99%</td>
-            <td>≥98%</td>
-            <td>≥99%</td>
-          </tr>
-          <tr>
-            <td>Form</td>
-            <td>Lyophilized</td>
-            <td>Lyophilized</td>
-            <td>Lyophilized</td>
-            <td>Lyophilized</td>
-          </tr>
-          <tr>
-            <td>Size</td>
-            <td>5mg / 10mg</td>
-            <td>5mg</td>
-            <td>2mg</td>
-            <td>2mg</td>
-          </tr>
-          <tr>
-            <td>Starting at</td>
-            <td>$49</td>
-            <td>$65</td>
-            <td>$89</td>
-            <td>$39</td>
-          </tr>
-          <tr>
-            <td></td>
-            <td><a href="#" class="link-cta small" data-add="bpc-157">Add</a></td>
-            <td><a href="#" class="link-cta small" data-add="tb-500">Add</a></td>
-            <td><a href="#" class="link-cta small" data-add="semaglutide">Add</a></td>
-            <td><a href="#" class="link-cta small" data-add="ipamorelin">Add</a></td>
-          </tr>
-        </tbody>
-      </table>
+      <h2>Per-vial research pricing.</h2>
+      <p>19 compounds across five research categories. All prices shown per lyophilized vial — COA included.</p>
     </div>
   </section>
 
@@ -436,8 +292,8 @@
     </div>
     <div class="faq-list">
       <details class="faq-item reveal">
-        <summary>Are these peptides for human consumption?</summary>
-        <p>No. All ONYX Peptides products are sold strictly for in-vitro laboratory research purposes. They are not intended for human or animal consumption, diagnosis, treatment, or prevention of any disease.</p>
+        <summary>Are these peptides for laboratory research only?</summary>
+        <p>Yes. All ONYX Peptides products are sold strictly for in-vitro laboratory research purposes. They are not intended for consumption, diagnosis, treatment, or prevention of any disease.</p>
       </details>
       <details class="faq-item reveal">
         <summary>How should lyophilized peptides be stored?</summary>
@@ -471,7 +327,7 @@
   <!-- Legal Disclaimer -->
   <section class="disclaimer-section">
     <div class="disclaimer-inner reveal">
-      <p><strong>Research Use Only (RUO).</strong> All products sold by ONYX Peptides are intended exclusively for in-vitro laboratory research by qualified personnel. Not for human or animal consumption, diagnosis, treatment, or prevention of any disease. By purchasing or submitting an order, you attest that you are 18 years of age or older, a qualified researcher or authorized representative of a licensed research institution, and that products will be used solely for legitimate laboratory research in compliance with applicable laws.</p>
+      <p><strong>Research Use Only (RUO).</strong> All products sold by ONYX Peptides are intended exclusively for in-vitro laboratory research by qualified personnel. Not for consumption, diagnosis, treatment, or prevention of any disease. By purchasing or submitting an order, you attest that you are 18 years of age or older, a qualified researcher or authorized representative of a licensed research institution, and that products will be used solely for legitimate laboratory research in compliance with applicable laws.</p>
     </div>
   </section>
 
@@ -482,9 +338,11 @@
         <h4>Shop</h4>
         <ul>
           <li><a href="#peptides">All Peptides</a></li>
-          <li><a href="#goals" data-goal="endocrine-research">Endocrine Research</a></li>
           <li><a href="#goals" data-goal="metabolic-research">Metabolic Research</a></li>
+          <li><a href="#goals" data-goal="tissue-research">Tissue Research</a></li>
           <li><a href="#goals" data-goal="matrix-research">Matrix Research</a></li>
+          <li><a href="#goals" data-goal="cognitive-research">Cognitive Research</a></li>
+          <li><a href="#goals" data-goal="longevity-research">Longevity Research</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -560,10 +418,10 @@
 
   <script src="js/config.js"></script>
   <script src="js/storefront.js"></script>
-  <script src="js/products.js?v=3"></script>
-  <script src="js/product-details.js?v=3"></script>
+  <script src="js/products.js?v=5"></script>
+  <script src="js/product-details.js?v=5"></script>
   <script src="js/cart.js"></script>
   <script src="js/analytics.js"></script>
-  <script src="js/main.js?v=3"></script>
+  <script src="js/main.js?v=6"></script>
 </body>
 </html>

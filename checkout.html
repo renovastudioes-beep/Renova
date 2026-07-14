@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Checkout — ONYX Peptides</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="css/styles.css?v=70">
+  <link rel="stylesheet" href="css/styles.css?v=71">
 </head>
 <body class="page-body">
   <div class="ruo-banner" role="note">
-    <strong>Research Use Only (RUO).</strong> Products are for in-vitro laboratory research by qualified personnel — not for human or animal consumption.
+    <strong>Research Use Only (RUO).</strong> Products are for in-vitro laboratory research by qualified personnel only.
   </div>
   <nav class="global-nav scrolled">
     <div class="nav-content">
@@ -32,7 +32,7 @@
         <section class="checkout-section">
           <h2>Research Qualification</h2>
           <p class="checkout-note">All purchasers must attest to qualified research use before order submission.</p>
-          <label class="check-label"><input type="checkbox" id="ruoAck" required> I confirm these products are for <strong>in-vitro laboratory research only</strong> and will not be used for human or animal consumption, diagnosis, treatment, or prevention of any disease.</label>
+          <label class="check-label"><input type="checkbox" id="ruoAck" required> I confirm these products are for <strong>in-vitro laboratory research only</strong> and will not be used for consumption, diagnosis, treatment, or prevention of any disease.</label>
           <label class="check-label"><input type="checkbox" id="ageAck" required> I am 18 years of age or older and am a qualified researcher or authorized representative of a licensed research institution.</label>
           <label class="check-label"><input type="checkbox" id="instAck" required> I attest that products will be used solely for legitimate laboratory research in compliance with applicable federal, state, and local laws.</label>
         </section>
@@ -40,7 +40,7 @@
         <section class="checkout-section">
           <h2>Contact</h2>
           <label class="form-field"><span>Full Name *</span><input type="text" id="fullName" required></label>
-          <label class="form-field"><span>Institution / Laboratory *</span><input type="text" id="institution" required placeholder="University, CRO, or licensed research facility"></label>
+          <label class="form-field"><span>Institution / Laboratory (optional)</span><input type="text" id="institution" placeholder="University, CRO, or research facility"></label>
           <label class="form-field"><span>Email *</span><input type="email" id="email" required></label>
           <label class="form-field"><span>Phone</span><input type="tel" id="phone"></label>
         </section>
@@ -71,18 +71,18 @@
           <div class="checkout-line checkout-total"><span>Total</span><span id="sumTotal">$0.00</span></div>
           <p class="checkout-quote-note">Cold-chain shipping to qualified research addresses. Free shipping on orders over $150.</p>
         </div>
-        <p class="checkout-ruo-note"><strong>RUO only.</strong> Not for human consumption. Research qualification attestation required.</p>
+        <p class="checkout-ruo-note"><strong>RUO only.</strong> For in-vitro laboratory research. Research qualification attestation required.</p>
       </aside>
     </div>
   </main>
 
   <script src="js/config.js"></script>
   <script src="js/storefront.js"></script>
-  <script src="js/products.js?v=3"></script>
+  <script src="js/products.js?v=4"></script>
   <script src="js/cart.js"></script>
   <script src="js/pos-data.js"></script>
   <script src="js/admin-data.js"></script>
   <script src="js/analytics.js"></script>
-  <script src="js/checkout.js?v=2"></script>
+  <script src="js/checkout.js?v=3"></script>
 </body>
 </html>

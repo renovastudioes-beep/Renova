@@ -41,14 +41,25 @@ window.RenvoaAdmin = (function () {
   ];
 
   const LANDED_COGS = {
-    'bpc-157': 19,
-    'tb-500': 33,
-    'semaglutide': 12,
-    'ipamorelin': 13,
-    'cjc-1295': 18,
-    'ghk-cu': 17,
-    'recovery-stack': 52,
-    'gh-stack': 28,
+    semaglutide: 5.6,
+    tirzepatide: 5.9,
+    retatrutide: 9.8,
+    tesamorelin: 10.1,
+    'aod-9604': 9.1,
+    'mots-c': 7.5,
+    'gh-stack': 9,
+    sermorelin: 7.8,
+    'bpc-157': 4.6,
+    'tb-500': 8.4,
+    'recovery-stack': 10.4,
+    'igf-1-lr3': 19.5,
+    'ghk-cu': 4,
+    'glow-blend': 16,
+    'semax-selank': 4.55,
+    'pt-141': 6.9,
+    'nad-plus': 6.1,
+    'thymosin-alpha-1': 9.7,
+    epithalon: 5,
     'bac-water': 4,
   };
 

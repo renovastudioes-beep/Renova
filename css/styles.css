@@ -1403,7 +1403,7 @@ img { max-width: 100%; display: block; }
   transform: translate(-50%, -50%) scale(0.96);
   z-index: 10004;
   width: 94%;
-  max-width: 920px;
+  max-width: 520px;
   max-height: 92vh;
   overflow: hidden;
   background: #fff;
@@ -1456,6 +1456,128 @@ img { max-width: 100%; display: block; }
 .modal-close:hover { background: #fff; }
 
 .modal-content { padding: 0; }
+
+/* Simplified product detail modal */
+.modal-simple-head {
+  position: relative;
+  padding: 28px 28px 22px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.modal-simple-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--hero-accent, #3b82f6);
+}
+
+.modal-simple-head-inner {
+  text-align: left;
+}
+
+.modal-simple-head h2 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 8px 0 4px;
+  color: var(--apple-gray-8);
+}
+
+.modal-simple-head .modal-tagline {
+  font-size: 15px;
+  color: var(--apple-gray-5);
+  margin-bottom: 8px;
+}
+
+.modal-simple-head .modal-price {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--apple-gray-8);
+  margin-bottom: 6px;
+}
+
+.modal-simple-head .modal-lot {
+  font-size: 13px;
+  color: var(--apple-gray-4);
+  margin: 0;
+}
+
+.modal-body-simple {
+  padding: 20px 28px 24px;
+}
+
+.modal-body-simple .modal-lead {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--apple-gray-6);
+  margin-bottom: 18px;
+}
+
+.modal-specs-compact {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+}
+
+.modal-specs-compact .modal-spec {
+  padding: 10px 12px;
+  background: var(--apple-gray-1);
+  border-radius: 10px;
+}
+
+.modal-specs-compact .modal-spec label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--apple-gray-4);
+  margin-bottom: 2px;
+}
+
+.modal-specs-compact .modal-spec span {
+  font-size: 14px;
+  color: var(--apple-gray-7);
+  word-break: break-word;
+}
+
+.modal-simple-quality {
+  font-size: 13px;
+  color: var(--apple-gray-5);
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+
+.modal-protocol-note-compact {
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--apple-gray-1);
+  margin-bottom: 16px;
+}
+
+.modal-body-simple .modal-related {
+  margin-top: 4px;
+  margin-bottom: 16px;
+}
+
+.modal-body-simple .modal-related h4 {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.modal-actions-simple {
+  padding-top: 4px;
+  gap: 10px;
+}
+
+.modal-actions-simple .btn-primary {
+  width: 100%;
+}
 
 /* Hero banner with photo */
 .modal-hero-banner {
