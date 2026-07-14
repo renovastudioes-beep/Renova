@@ -49,7 +49,7 @@ html.gateway-page-enter.gateway-page-ready .studios-page {
 .studio-line-switch-wrap {
   position: sticky;
   top: var(--nav-height);
-  z-index: 90;
+  z-index: 9994;
   display: flex;
   justify-content: center;
   padding: 10px var(--studio-gutter) 12px;

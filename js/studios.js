@@ -123,16 +123,26 @@
     $$('#navLinks > li[data-nav-line]').forEach((li) => {
       li.hidden = !lineScopeAllowed(li, line);
     });
+    $$('#navDrawerLinks .nav-drawer-item[data-nav-line]').forEach((el) => {
+      el.hidden = !lineScopeAllowed(el, line);
+    });
     const servicesLink = $('#navServicesLink');
     if (servicesLink) servicesLink.textContent = cfg.services;
-    const processLink = $('#navProcessLink');
-    if (processLink) processLink.textContent = cfg.process;
     const bookLink = $('#navBookLink');
     if (bookLink) bookLink.textContent = cfg.book;
+    const drawerServices = $('#drawerServicesLink');
+    if (drawerServices) drawerServices.textContent = cfg.services;
+    const drawerBook = $('#drawerBookLink');
+    if (drawerBook) drawerBook.textContent = cfg.book;
     const cta = $('#navCtaBtn');
     if (cta) {
       cta.href = cfg.cta.href;
       cta.textContent = cfg.cta.text;
+    }
+    const drawerCta = $('#drawerCtaBtn');
+    if (drawerCta) {
+      drawerCta.href = cfg.cta.href;
+      drawerCta.textContent = cfg.cta.text;
     }
     document.body.dataset.studioNavLine = line;
 
@@ -279,11 +289,73 @@
     });
 
     const nav = $('#globalNav');
+    const navDrawer = $('#navDrawer');
+    const navDrawerOverlay = $('#navDrawerOverlay');
+    const navHamburger = $('#navHamburger');
+
+    function syncStudioHeaderOffset() {
+      const page = document.querySelector('.studios-page');
+      const lineSwitch = page?.querySelector('.studio-line-switch-wrap');
+      if (!page || !lineSwitch) return;
+      const h = Math.ceil(lineSwitch.getBoundingClientRect().height);
+      if (h > 0) page.style.setProperty('--line-switch-height', `${h}px`);
+    }
+
+    function openNavDrawer() {
+      if (!navDrawer) return;
+      navDrawer.classList.add('active');
+      navDrawerOverlay?.classList.add('active');
+      navHamburger?.classList.add('active');
+      navHamburger?.setAttribute('aria-expanded', 'true');
+      navHamburger?.setAttribute('aria-label', 'Close menu');
+      navDrawer.setAttribute('aria-hidden', 'false');
+      navDrawerOverlay?.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('drawer-open');
+      document.body.style.overflow = 'hidden';
+      syncStudioHeaderOffset();
+    }
+
+    function closeNavDrawer() {
+      if (!navDrawer) return;
+      navDrawer.classList.remove('active');
+      navDrawerOverlay?.classList.remove('active');
+      navHamburger?.classList.remove('active');
+      navHamburger?.setAttribute('aria-expanded', 'false');
+      navHamburger?.setAttribute('aria-label', 'Open menu');
+      navDrawer.setAttribute('aria-hidden', 'true');
+      navDrawerOverlay?.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('drawer-open');
+      document.body.style.overflow = '';
+    }
+
     const onScroll = () => nav?.classList.toggle('scrolled', window.scrollY > 10);
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
 
-    $('#navHamburger')?.addEventListener('click', () => $('#navLinks')?.classList.toggle('mobile-open'));
+    syncStudioHeaderOffset();
+    window.addEventListener('resize', syncStudioHeaderOffset, { passive: true });
+
+    navHamburger?.addEventListener('click', () => {
+      if (navDrawer?.classList.contains('active')) closeNavDrawer();
+      else openNavDrawer();
+    });
+    $('#navDrawerClose')?.addEventListener('click', closeNavDrawer);
+    navDrawerOverlay?.addEventListener('click', closeNavDrawer);
+    $$('#navDrawerLinks a').forEach((link) => {
+      link.addEventListener('click', () => closeNavDrawer());
+    });
+    $$('[data-studio-line-pick]').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const line = link.dataset.studioLinePick;
+        if (line) setStudioLine(line, { scroll: true });
+        closeNavDrawer();
+      });
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeNavDrawer();
+    });
   }
 
   const revealObs = new IntersectionObserver((entries) => {
