@@ -231,13 +231,16 @@
     navHamburger?.setAttribute('aria-label', 'Close menu');
     navDrawer.setAttribute('aria-hidden', 'false');
     navDrawerOverlay?.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('drawer-open');
     document.body.style.overflow = 'hidden';
+    syncPeptideHeaderOffset();
   }
 
   function closeNavDrawer() {
     if (!navDrawer) return;
     navDrawer.classList.remove('active');
     navDrawerOverlay?.classList.remove('active');
+    document.body.classList.remove('drawer-open');
     navHamburger?.classList.remove('active');
     navHamburger?.setAttribute('aria-expanded', 'false');
     navHamburger?.setAttribute('aria-label', 'Open menu');
@@ -558,6 +561,17 @@
   searchInput?.addEventListener('input', (e) => renderSearchResults(e.target.value));
   modalClose?.addEventListener('click', closeModal);
   modalOverlay?.addEventListener('click', closeModal);
+
+  function syncPeptideHeaderOffset() {
+    const page = document.querySelector('.peptides-page');
+    const banner = page?.querySelector('.ruo-banner');
+    if (!banner) return;
+    const h = Math.ceil(banner.getBoundingClientRect().height);
+    if (h > 0) page.style.setProperty('--ruo-strip-height', `${h}px`);
+  }
+
+  syncPeptideHeaderOffset();
+  window.addEventListener('resize', syncPeptideHeaderOffset, { passive: true });
 
   navHamburger?.addEventListener('click', () => {
     if (navDrawer?.classList.contains('active')) closeNavDrawer();
