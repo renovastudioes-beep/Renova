@@ -81,7 +81,7 @@
         zip: $('#zip').value,
       },
       items: [...cart],
-      qualified: $('#ruoAck').checked && $('#ageAck').checked && $('#instAck')?.checked,
+      qualified: $('#ruoAck').checked,
       pricingStatus: isQuote ? 'pending' : 'confirmed',
     };
 

@@ -571,7 +571,7 @@
   // Hero rotation
   const HERO_SLIDES = [
     { id: 'semaglutide', eyebrow: 'Featured', title: 'Semaglutide.<br>GLP-1 analog.', sub: 'Research-grade lyophilized vial — HPLC verified for in-vitro metabolic pathway studies.', label: 'Semaglutide' },
-    { id: 'bpc-157', eyebrow: 'Popular', title: 'BPC-157<br>For in-vitro laboratory research only.', sub: 'Lyophilized research vial with batch-specific COA for qualified laboratory use.', label: 'BPC-157' },
+    { id: 'bpc-157', eyebrow: 'Popular', title: 'BPC-157.<br>Pentadecapeptide.', sub: '≥99% purity. HPLC verified. 5mg & 10mg lyophilized vials.', label: 'BPC-157' },
     { id: 'tirzepatide', eyebrow: 'New', title: 'Tirzepatide.<br>Dual pathway analog.', sub: 'GIP/GLP-1 receptor analog for in-vitro endocrine signaling research.', label: 'Tirzepatide' },
   ];
   let heroIndex = 0;
@@ -589,7 +589,7 @@
     heroIndex = i;
     if (heroEyebrow) heroEyebrow.textContent = s.eyebrow;
     heroTitle.innerHTML = s.title;
-    if (heroSub) heroSub.innerHTML = s.sub + '<br>For in-vitro laboratory research only.';
+    if (heroSub) heroSub.innerHTML = s.sub;
     if (heroBuy) {
       const hp = PRODUCTS[s.id];
       heroBuy.dataset.add = s.id;
@@ -601,6 +601,7 @@
   }
 
   if (heroTitle) {
+    setHeroSlide(0);
     setInterval(() => setHeroSlide((heroIndex + 1) % HERO_SLIDES.length), 6000);
     heroDots.forEach((dot, i) => dot.addEventListener('click', () => setHeroSlide(i)));
   }
