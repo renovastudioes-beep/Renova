@@ -1,6 +1,7 @@
 window.RenvoaCart = (function () {
   'use strict';
   const KEY = 'renvoa-clinic-cart';
+  const catalog = () => window.PRODUCTS || {};
 
   function getCart() {
     try {
@@ -35,14 +36,14 @@ window.RenvoaCart = (function () {
   }
 
   function getItemPrice(item) {
-    const p = PRODUCTS[item.id];
+    const p = catalog()[item.id];
     if (!p) return 0;
     const v = getVariant(p, item.size);
     return v ? v.price : p.price;
   }
 
   function getItemLabel(item) {
-    const p = PRODUCTS[item.id];
+    const p = catalog()[item.id];
     if (!p) return item.id;
     const v = getVariant(p, item.size);
     const sizeLabel = v?.label && p.variants ? ` (${v.label})` : '';
@@ -65,7 +66,7 @@ window.RenvoaCart = (function () {
 
   function addItem(id, size, qty = 1) {
     const cart = getCart();
-    const p = PRODUCTS[id];
+    const p = catalog()[id];
     const resolvedSize = size || p?.defaultVariant || (p?.variants ? Object.keys(p.variants)[0] : null);
     const existing = cart.find((i) => i.id === id && i.size === resolvedSize);
     if (existing) existing.qty += qty;

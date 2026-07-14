@@ -1,6 +1,11 @@
 (function () {
   'use strict';
 
+  const PRODUCTS = window.PRODUCTS || {};
+  const GOAL_CATEGORIES = window.GOAL_CATEGORIES || {};
+  const GOAL_ALIASES = window.GOAL_ALIASES || {};
+  const PRODUCT_DETAILS = window.PRODUCT_DETAILS || {};
+
   const C = window.RenvoaCart;
   const SF = window.RenvoaStorefront;
   let cart = C.getCart();
@@ -94,6 +99,7 @@
     if (!grid) return;
     const order = window.PRODUCT_CATALOG_ORDER || Object.keys(PRODUCTS);
     grid.innerHTML = order.map(renderProductTile).join('');
+    observeReveals(grid);
   }
 
   function resolveGoalId(goalId) {
@@ -529,7 +535,16 @@
     { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
   );
 
-  $$('.reveal').forEach((el) => revealObserver.observe(el));
+  function observeReveals(root) {
+    const scope = root || document;
+    scope.querySelectorAll('.reveal').forEach((el) => {
+      if (el.dataset.revealObserved) return;
+      el.dataset.revealObserved = '1';
+      revealObserver.observe(el);
+    });
+  }
+
+  observeReveals();
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
