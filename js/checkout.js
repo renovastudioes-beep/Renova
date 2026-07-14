@@ -4,7 +4,6 @@
   const SF = window.RenvoaStorefront;
   const $ = (s) => document.querySelector(s);
 
-  let bacAddon = false;
   const isQuote = SF.checkoutIsQuote();
 
   function renderSummary() {
@@ -30,17 +29,7 @@
       </div>`;
     }).join('');
 
-    if (bacAddon) {
-      const bacPrice = isQuote
-        ? '<span class="checkout-quote-label">Quoted in POS</span>'
-        : `<span>${C.formatPrice(12)}</span>`;
-      list.innerHTML += `<div class="checkout-line checkout-addon-line">
-        <span>Bacteriostatic Water 30mL × 1</span>
-        ${bacPrice}
-      </div>`;
-    }
-
-    const sub = C.getCartSubtotal(cart) + (bacAddon ? 12 : 0);
+    const sub = C.getCartSubtotal(cart);
     const ship = C.getShipping(sub);
     const total = sub + ship;
 
@@ -64,11 +53,6 @@
     }
   }
 
-  $('#bacAddon')?.addEventListener('change', (e) => {
-    bacAddon = e.target.checked;
-    renderSummary();
-  });
-
   renderSummary();
 
   $('#checkoutForm')?.addEventListener('submit', async (e) => {
@@ -85,6 +69,7 @@
       date: new Date().toISOString(),
       customer: {
         name: $('#fullName').value,
+        institution: $('#institution')?.value || '',
         email: $('#email').value,
         phone: $('#phone').value,
       },
@@ -96,12 +81,11 @@
         zip: $('#zip').value,
       },
       items: [...cart],
-      bacWater: bacAddon,
-      qualified: $('#ruoAck').checked && $('#ageAck').checked,
+      qualified: $('#ruoAck').checked && $('#ageAck').checked && $('#instAck')?.checked,
       pricingStatus: isQuote ? 'pending' : 'confirmed',
     };
 
-    const pricing = window.RenvoaPOS?.priceCartItems(cart, bacAddon);
+    const pricing = window.RenvoaPOS?.priceCartItems(cart, false);
     if (pricing) {
       order.internalPricing = pricing;
       if (!isQuote) {
@@ -127,7 +111,7 @@
     localStorage.setItem('renvoa-last-order', JSON.stringify(order));
     window.RenvoaAdmin?.registerOrder(order);
     C.clearCart();
-    if (bacAddon) localStorage.setItem('renvoa-bac-addon', '1');
+
     if (!isQuote) window.RenvoaTrack?.('purchase', { value: order.total, currency: 'USD' });
     window.location.href = 'order-confirmation.html?id=' + order.id;
   });

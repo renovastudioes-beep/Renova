@@ -32,6 +32,7 @@
     bookPriorServices: '',
     bookBeverage: '',
     bookInspoPhotos: [],
+    bookPrefsExpanded: false,
     confirmed: null,
     intakeApptId: '',
     intakeStep: 0,
@@ -1003,8 +1004,8 @@
           `).join('') : '<p class="studio-book-empty">No openings for this day.</p>'}
         </div>
         ${state.bookTime ? `
-          ${renderBookingPreferencesFields('portal')}
-          <button type="button" class="btn-primary btn-full" data-portal-book-confirm>Confirm booking</button>` : ''}
+          <button type="button" class="btn-primary btn-full" data-portal-book-confirm>Confirm booking</button>
+          ${renderBookingPreferencesFields('portal')}` : ''}
       </div>`;
   }
 
@@ -1023,34 +1024,60 @@
       </div>`;
   }
 
+  function clearPortalBookingPreferences() {
+    state.bookHairLikes = '';
+    state.bookHairDislikes = '';
+    state.bookPriorServices = '';
+    state.bookBeverage = '';
+    state.bookInspoPhotos = [];
+  }
+
   function renderBookingPreferencesFields(prefix = 'portal') {
+    if (!state.bookPrefsExpanded) {
+      return `
+        <section class="studio-book-prefs studio-book-prefs-collapsed">
+          <p class="studio-portal-hint">Hair preferences and photos are optional — skip to confirm faster, or add them if you&apos;d like.</p>
+          <div class="studio-book-prefs-actions">
+            <button type="button" class="btn-secondary btn-sm" data-book-prefs-toggle>Add preferences &amp; photos (optional)</button>
+          </div>
+        </section>`;
+    }
+
     const VF = window.StudioVisitFlow;
     const beverages = VF?.getArrivalBeverages?.() || [];
     const photos = state.bookInspoPhotos || [];
     return `
-      <section class="studio-book-prefs">
-        <h4>Help us prepare for you</h4>
-        <p class="studio-portal-hint">Optional — share inspiration and preferences so your chair is ready when you arrive.</p>
-        <label class="form-field"><span>What you like about past hair services</span>
+      <section class="studio-book-prefs studio-book-prefs-expanded">
+        <div class="studio-book-prefs-head">
+          <h4>Help us prepare for you <span class="studio-book-optional-tag">Optional</span></h4>
+          <button type="button" class="studio-book-prefs-skip link-cta" data-book-prefs-skip>Skip for now</button>
+        </div>
+        <p class="studio-portal-hint">Share what you can — we&apos;ll welcome you either way.</p>
+        <label class="form-field"><span>What you like about past hair services <em>(optional)</em></span>
           <textarea id="${prefix}HairLikes" rows="2" placeholder="Cuts, color, stylists, products you loved…">${esc(state.bookHairLikes)}</textarea></label>
-        <label class="form-field"><span>What you did not like</span>
+        <label class="form-field"><span>What you did not like <em>(optional)</em></span>
           <textarea id="${prefix}HairDislikes" rows="2" placeholder="Anything to avoid — damage, tone, wait time, style…">${esc(state.bookHairDislikes)}</textarea></label>
-        <label class="form-field"><span>Prior hair services (last 12 months)</span>
+        <label class="form-field"><span>Prior hair services (last 12 months) <em>(optional)</em></span>
           <textarea id="${prefix}PriorServices" rows="2" placeholder="Salon, barber, color, extensions, systems…">${esc(state.bookPriorServices)}</textarea></label>
-        <label class="form-field"><span>21+ arrival beverage</span>
+        <label class="form-field"><span>21+ arrival beverage <em>(optional)</em></span>
           <select id="${prefix}Beverage">
+            <option value=""${!state.bookBeverage ? ' selected' : ''}>No preference</option>
             ${beverages.map((b) => `<option value="${esc(b.id)}"${state.bookBeverage === b.id ? ' selected' : ''}>${esc(b.label)}</option>`).join('')}
           </select></label>
         <label class="form-field studio-book-inspo-upload">
-          <span>Inspiration photos</span>
+          <span>Inspiration photos <em>(optional)</em></span>
           <input type="file" id="${prefix}InspoPhotos" accept="image/*" multiple>
-          <small>Up to 6 photos — styles, colors, or references you love.</small>
+          <small>Up to 6 photos — add now or bring them to your visit.</small>
         </label>
         ${photos.length ? `<div class="studio-book-inspo-preview">${photos.map((p) => `<img src="${p.dataUrl}" alt="${esc(p.name || 'Inspo')}" title="${esc(p.name || '')}">`).join('')}</div>` : ''}
       </section>`;
   }
 
   function syncBookingPreferencesFromDOM(prefix = 'portal') {
+    if (!state.bookPrefsExpanded) {
+      clearPortalBookingPreferences();
+      return;
+    }
     state.bookHairLikes = ($(`#${prefix}HairLikes`)?.value || state.bookHairLikes || '').trim();
     state.bookHairDislikes = ($(`#${prefix}HairDislikes`)?.value || state.bookHairDislikes || '').trim();
     state.bookPriorServices = ($(`#${prefix}PriorServices`)?.value || state.bookPriorServices || '').trim();
@@ -1236,6 +1263,7 @@
     state.bookPriorServices = '';
     state.bookBeverage = '';
     state.bookInspoPhotos = [];
+    state.bookPrefsExpanded = false;
     const c = client();
     state.bookGender = c?.gender || 'men';
     state.bookCategory = defaultBookCategory(state.bookGender);
@@ -1546,8 +1574,22 @@
         return;
       }
 
+      if (e.target.closest('[data-book-prefs-toggle]')) {
+        state.bookPrefsExpanded = true;
+        render();
+        return;
+      }
+
+      if (e.target.closest('[data-book-prefs-skip]')) {
+        state.bookPrefsExpanded = false;
+        clearPortalBookingPreferences();
+        render();
+        return;
+      }
+
       if (e.target.closest('[data-portal-book-next]')) {
         state.bookStep = 1;
+        state.bookPrefsExpanded = false;
         render();
         return;
       }

@@ -1129,6 +1129,24 @@ img { max-width: 100%; display: block; }
   padding-right: 32px;
 }
 
+/* ---- RUO Banner ---- */
+.ruo-banner {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #f5f5f7;
+  background: #1d1d1f;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ruo-banner strong {
+  font-weight: 600;
+}
+
 /* ---- Disclaimer ---- */
 .disclaimer-section {
   padding: 40px 22px;

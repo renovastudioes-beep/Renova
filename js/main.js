@@ -43,15 +43,19 @@
   let activeGoal = null;
 
   const TILE_CONFIG = {
-    'tb-500':       { theme: 'tile-dark',     visual: 'vial-tb',   badge: 'Popular', tagline: 'Thymosin Beta-4 fragment.<br>5mg lyophilized.', light: true },
-    'recovery-stack': { theme: 'tile-gradient', visual: 'vial-bpc', badge: 'Bundle', tagline: 'BPC-157 5mg + TB-500 5mg.<br>Recovery bundle.', light: true },
-    'gh-stack':     { theme: 'tile-accent',   visual: 'vial-ipa',  badge: 'Bundle', tagline: 'Ipamorelin + CJC-1295.<br>GH axis stack.', light: true },
-    'bpc-157':      { theme: 'tile-light',    visual: 'vial-bpc',  tagline: 'Body Protection Compound.<br>5mg &amp; 10mg options.' },
-    'semaglutide':  { theme: 'tile-gradient', visual: 'vial-sema', badge: 'New', tagline: 'GLP-1 receptor agonist.<br>Research-grade 2mg.', light: true },
-    'ipamorelin':   { theme: 'tile-light',    visual: 'vial-ipa',  tagline: 'Selective GH secretagogue.<br>2mg per vial.' },
-    'cjc-1295':     { theme: 'tile-dark',     visual: 'vial-cjc',  tagline: 'GHRH analog, no DAC.<br>2mg lyophilized.', light: true },
-    'ghk-cu':       { theme: 'tile-accent',   visual: 'vial-ghk',  tagline: 'Copper peptide complex.<br>50mg per vial.', light: true },
+    'tb-500':         { theme: 'tile-dark',     visual: 'vial-tb',   badge: 'Popular', tagline: 'Synthetic heptapeptide (LKKTETQ).<br>5mg lyophilized vial.', light: true },
+    'recovery-stack': { theme: 'tile-gradient', visual: 'vial-bpc',  badge: 'Pairing', tagline: 'BPC-157 5mg + TB-500 5mg.<br>Commonly studied pairing.', light: true },
+    'gh-stack':       { theme: 'tile-accent',   visual: 'vial-ipa',  badge: 'Pairing', tagline: 'Ipamorelin + CJC-1295.<br>Commonly studied pairing.', light: true },
+    'bpc-157':        { theme: 'tile-light',    visual: 'vial-bpc',  tagline: 'Pentadecapeptide.<br>5mg &amp; 10mg lyophilized vials.' },
+    'semaglutide':    { theme: 'tile-gradient', visual: 'vial-sema', badge: 'New', tagline: 'GLP-1 analog.<br>Research-grade 2mg.', light: true },
+    'ipamorelin':     { theme: 'tile-light',    visual: 'vial-ipa',  tagline: 'Synthetic pentapeptide.<br>2mg lyophilized vial.' },
+    'cjc-1295':       { theme: 'tile-dark',     visual: 'vial-cjc',  tagline: 'Modified GHRH(1-29) peptide.<br>2mg lyophilized vial.', light: true },
+    'ghk-cu':         { theme: 'tile-accent',   visual: 'vial-ghk',  tagline: 'Copper(II)-GHK tripeptide.<br>50mg lyophilized vial.', light: true },
   };
+
+  function resolveGoalId(goalId) {
+    return GOAL_ALIASES?.[goalId] || goalId;
+  }
 
   function saveCart() {
     C.saveCart(cart);
@@ -276,7 +280,7 @@
           <button class="modal-tab" data-tab="research" type="button" role="tab">Research</button>
           <button class="modal-tab" data-tab="gallery" type="button" role="tab">In the Lab</button>
           <button class="modal-tab" data-tab="specs" type="button" role="tab">Specifications</button>
-          <button class="modal-tab" data-tab="protocol" type="button" role="tab">Protocol</button>
+          <button class="modal-tab" data-tab="protocol" type="button" role="tab">Handling</button>
         </nav>
 
         <div class="modal-panels">
@@ -284,7 +288,7 @@
             <p class="modal-lead">${p.longDescription || p.description}</p>
             <div class="modal-split">
               <div class="modal-split-text">
-                <h4 class="modal-section-title">Mechanism of Action</h4>
+                <h4 class="modal-section-title">Chemical Profile</h4>
                 <p class="modal-text">${p.mechanism || ''}</p>
                 <h4 class="modal-section-title">Research Areas</h4>
                 <div class="modal-tags">${areaTags}</div>
@@ -309,7 +313,7 @@
           </div>
 
           <div class="modal-panel" data-panel="gallery" role="tabpanel">
-            <p class="modal-gallery-intro">How researchers use ${p.name} across laboratory and clinical research settings.</p>
+            <p class="modal-gallery-intro">How qualified laboratories use ${p.name} in controlled in-vitro research settings.</p>
             <div class="modal-gallery">${gallery}</div>
             <div class="modal-gallery-disclaimer">
               <strong>Research use only.</strong> Images depict research contexts and laboratory applications. ONYX Peptides products are not intended for human consumption or self-administration.
@@ -343,9 +347,9 @@
           </div>
 
           <div class="modal-panel" data-panel="protocol" role="tabpanel">
-            <h4 class="modal-section-title">Reconstitution Steps</h4>
+            <h4 class="modal-section-title">Laboratory Handling</h4>
             <ol class="modal-steps">${steps}</ol>
-            <h4 class="modal-section-title">General Reconstitution Notes</h4>
+            <h4 class="modal-section-title">Preparation Notes</h4>
             <p class="modal-text">${p.reconstitution || ''}</p>
             <h4 class="modal-section-title">Handling &amp; Storage</h4>
             <p class="modal-text">${p.handling || p.storage}</p>
@@ -413,18 +417,19 @@
   }
 
   function openGoalOverlay(goalId) {
-    const goal = GOAL_CATEGORIES[goalId];
+    const resolved = resolveGoalId(goalId);
+    const goal = GOAL_CATEGORIES[resolved];
     if (!goal) return;
 
-    if (activeGoal === goalId) {
+    if (activeGoal === resolved) {
       closeGoalOverlay();
       return;
     }
 
-    activeGoal = goalId;
+    activeGoal = resolved;
 
     $$('.goal-card').forEach((card) => {
-      card.classList.toggle('active', card.dataset.goal === goalId);
+      card.classList.toggle('active', resolveGoalId(card.dataset.goal) === resolved);
     });
 
     goalOverlayTitle.textContent = goal.label;
@@ -608,11 +613,11 @@
 
   const urlParams = new URLSearchParams(window.location.search);
   const goalParam = urlParams.get('goal');
-  if (goalParam && GOAL_CATEGORIES[goalParam]) {
+  if (goalParam && GOAL_CATEGORIES[resolveGoalId(goalParam)]) {
     setTimeout(() => applyGoalFilter(goalParam), 400);
   } else if (window.location.hash.startsWith('#goal-')) {
     const goalId = window.location.hash.replace('#goal-', '');
-    if (GOAL_CATEGORIES[goalId]) setTimeout(() => applyGoalFilter(goalId), 400);
+    if (GOAL_CATEGORIES[resolveGoalId(goalId)]) setTimeout(() => applyGoalFilter(goalId), 400);
   }
   const productParam = urlParams.get('product');
   if (productParam && PRODUCTS[productParam]) {
@@ -621,9 +626,9 @@
 
   // Hero rotation
   const HERO_SLIDES = [
-    { id: 'bpc-157', eyebrow: 'Featured', title: 'BPC-157.<br>Precision redefined.', sub: '≥99% purity. HPLC verified. Lyophilized for maximum stability.', price: 49, label: 'BPC-157' },
-    { id: 'semaglutide', eyebrow: 'New', title: 'Semaglutide.<br>GLP-1 research.', sub: 'The benchmark GLP-1 receptor agonist for metabolic pathway studies.', price: 89, label: 'Semaglutide' },
-    { id: 'tb-500', eyebrow: 'Popular', title: 'TB-500.<br>Repair pathways.', sub: 'Thymosin Beta-4 fragment for cell migration and tissue research.', price: 65, label: 'TB-500' },
+    { id: 'bpc-157', eyebrow: 'Featured', title: 'BPC-157.<br>Research-grade pentadecapeptide.', sub: '≥99% purity. HPLC verified. 5mg &amp; 10mg lyophilized vials for in-vitro research.', price: 49, label: 'BPC-157' },
+    { id: 'semaglutide', eyebrow: 'New', title: 'Semaglutide.<br>GLP-1 analog.', sub: 'Research-grade 2mg lyophilized vial for qualified metabolic pathway studies.', price: 89, label: 'Semaglutide' },
+    { id: 'tb-500', eyebrow: 'Popular', title: 'TB-500.<br>Synthetic heptapeptide.', sub: 'LKKTETQ sequence — 5mg lyophilized vial for in-vitro laboratory research.', price: 65, label: 'TB-500' },
   ];
   let heroIndex = 0;
   const heroEyebrow = $('#heroEyebrow');

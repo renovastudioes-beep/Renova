@@ -100,7 +100,7 @@ const STUDIO_PUBLIC_LINES = {
     label: 'Salon',
     headline: 'Salon & styling',
     summary: 'Cuts, blowouts, color, highlights, keratin, and finishing services in a one-on-one studio.',
-    categories: ['womens_styling', 'addon'],
+    categories: ['womens_styling'],
     usesGender: false,
     implicitGender: 'women',
     defaultCategory: 'womens_styling',

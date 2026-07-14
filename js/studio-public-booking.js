@@ -33,6 +33,7 @@
     priorServices: '',
     beverage: '',
     inspoPhotos: [],
+    prefsExpanded: false,
     error: '',
     confirmed: null,
     returningClient: null,
@@ -390,9 +391,95 @@
     return 'Private consultation';
   }
 
+  function barberSalonCategory() {
+    return state.line === 'barber' ? 'mens_grooming' : 'womens_styling';
+  }
+
+  function sortBarberSalonServices(services) {
+    return [...services].sort((a, b) => {
+      if (a.featured !== b.featured) return a.featured ? -1 : 1;
+      return String(RS().shortName(a.name)).localeCompare(String(RS().shortName(b.name)));
+    });
+  }
+
+  function renderBarberSalonServiceCard(svc) {
+    const isConsult = RS().resolvePublicBookingMode(svc) === 'consult';
+    const from = isConsult
+      ? { display: `From ${RS().formatPrice(svc.consultFromPrice || window.STUDIO_COLOR_CONSULT_FROM || svc.price)}` }
+      : { display: RS().formatPrice(svc.price) };
+    const selected = state.bookServiceId === svc.id || state.serviceId === svc.id;
+    const badges = [
+      isConsult ? '<span class="studio-book-badge studio-book-badge-consult">Consult first</span>' : '',
+      svc.featured && !isConsult ? '<span class="studio-book-badge studio-book-badge-feature">Popular</span>' : '',
+    ].filter(Boolean).join('');
+    return `
+      <button type="button" class="studio-book-option${selected ? ' selected' : ''}${svc.featured ? ' featured' : ''}${badges ? ' has-badges' : ''}"
+        data-book-service="${svc.id}">
+        ${badges ? `<div class="studio-book-option-badges">${badges}</div>` : ''}
+        <div class="studio-book-option-body">
+          <div class="studio-book-option-head">
+            <strong>${esc(RS().shortName(svc.name))}</strong>
+            <span class="studio-book-from">${esc(from.display || 'Complimentary')}</span>
+          </div>
+          <span class="studio-book-meta">${esc(RS().formatClientDuration(svc))}</span>
+        </div>
+      </button>`;
+  }
+
+  function renderBarberSalonServiceStep() {
+    const meta = lineMeta(state.line);
+    const cat = barberSalonCategory();
+    state.category = cat;
+    const gender = bookingGender();
+    const allServices = publicBookableServices(gender, cat).filter((s) => !s.isPackage);
+    const direct = sortBarberSalonServices(allServices.filter((s) => RS().resolvePublicBookingMode(s) === 'direct'));
+    const color = sortBarberSalonServices(allServices.filter((s) => RS().resolvePublicBookingMode(s) === 'consult'));
+    const hasSelection = state.bookServiceId || state.serviceId;
+    const consultSummaryLabel = state.bookingMode === 'consult' ? 'Color consultation' : '';
+
+    return `
+      ${renderLineSwitch(state.line)}
+      <div class="studio-book-step-head">
+        <button type="button" class="studio-book-back" data-book-back-line>← Change</button>
+        <h3>${esc(meta.label)} — pick your service</h3>
+        <p>Tap a service to book. Cuts and styling reserve your chair directly — color starts with a short consult. $${RS().SCHEDULING_FEE} scheduling fee credited at your visit. <a href="#portal">Returning client? Sign in</a>.</p>
+      </div>
+      <div class="studio-book-service-groups">
+        <section class="studio-book-service-group">
+          <h4 class="studio-book-service-group-title">Book now</h4>
+          <p class="studio-book-fine">One tap — choose your date and time next.</p>
+          <div class="studio-book-options studio-book-options-simple">${direct.map(renderBarberSalonServiceCard).join('')}</div>
+        </section>
+        ${color.length ? `
+        <section class="studio-book-service-group">
+          <h4 class="studio-book-service-group-title">Color services</h4>
+          <p class="studio-book-fine">Reserve a color consult — we&apos;ll confirm your plan in-studio.</p>
+          <div class="studio-book-options studio-book-options-simple">${color.map(renderBarberSalonServiceCard).join('')}</div>
+        </section>` : ''}
+      </div>
+      ${hasSelection ? `
+        ${renderLuxAddonPicker()}
+        <div class="studio-book-selection-summary">
+          <div class="studio-book-selection-main">
+            <span class="studio-book-selection-label">Selected</span>
+            <strong class="studio-book-selection-name">${esc(state.intendedService)}</strong>
+          </div>
+          <div class="studio-book-selection-meta">
+            ${state.fromPriceDisplay ? `<span class="studio-book-selection-price">${esc(state.fromPriceDisplay)}</span>` : ''}
+            ${state.bookingMode === 'direct'
+              ? '<span class="studio-book-selection-type">Direct booking</span>'
+              : consultSummaryLabel
+                ? `<span class="studio-book-selection-type">${esc(consultSummaryLabel)}</span>`
+                : ''}
+          </div>
+        </div>
+        <button type="button" class="btn-primary btn-full studio-book-next" data-book-next>Continue</button>
+      ` : ''}`;
+  }
+
   function serviceStepLeadCopy(cat) {
     if (isBarberSalonLine()) {
-      return `Cuts and grooming book directly. Color reserves a consultation. $${RS().SCHEDULING_FEE} scheduling fee credited at your visit. <a href="#portal">Returning client? Sign in</a>.`;
+      return `Tap a service below. Cuts book directly — color starts with a short consult. $${RS().SCHEDULING_FEE} scheduling fee credited at your visit. <a href="#portal">Returning client? Sign in</a>.`;
     }
     if (cat === 'womens_extensions') {
       return `Pick a method below to see what&apos;s included. First visit is always a consultation — length, shade, and plan confirmed in-studio.`;
@@ -536,6 +623,10 @@
             <small>${esc(offerings.women?.summary || '')}</small>
           </button>
         </div>`;
+    }
+
+    if (isBarberSalonLine()) {
+      return renderBarberSalonServiceStep();
     }
 
     const meta = lineMeta(state.line);
@@ -692,28 +783,50 @@
       ${state.time ? `<button type="button" class="btn-primary btn-full studio-book-next" data-book-next>Continue</button>` : ''}`;
   }
 
+  function clearBookingPreferences() {
+    state.hairLikes = '';
+    state.hairDislikes = '';
+    state.priorServices = '';
+    state.beverage = '';
+    state.inspoPhotos = [];
+  }
+
   function renderBookingPreferencesFields() {
+    if (!state.prefsExpanded) {
+      return `
+        <section class="studio-book-prefs studio-book-prefs-collapsed">
+          <p class="studio-book-fine">Hair preferences and inspiration photos are optional — skip them to book faster, or add them if you&apos;d like.</p>
+          <div class="studio-book-prefs-actions">
+            <button type="button" class="btn-secondary btn-sm" data-book-prefs-toggle>Add preferences &amp; photos (optional)</button>
+          </div>
+        </section>`;
+    }
+
     const VF = window.StudioVisitFlow;
     const beverages = VF?.getArrivalBeverages?.() || [];
     const photos = state.inspoPhotos || [];
     return `
-      <section class="studio-book-prefs">
-        <h4>Help us prepare your visit</h4>
-        <p class="studio-book-fine">Optional — inspiration and preferences so your chair is ready when you arrive.</p>
-        <label class="form-field"><span>What you liked about past hair services</span>
+      <section class="studio-book-prefs studio-book-prefs-expanded">
+        <div class="studio-book-prefs-head">
+          <h4>Help us prepare your visit <span class="studio-book-optional-tag">Optional</span></h4>
+          <button type="button" class="studio-book-prefs-skip link-cta" data-book-prefs-skip>Skip for now</button>
+        </div>
+        <p class="studio-book-fine">Share what you can — we&apos;ll welcome you either way.</p>
+        <label class="form-field"><span>What you liked about past hair services <em>(optional)</em></span>
           <textarea name="hairLikes" rows="2" placeholder="Cuts, color, stylists, products you loved…">${esc(state.hairLikes)}</textarea></label>
-        <label class="form-field"><span>What you did not like</span>
+        <label class="form-field"><span>What you did not like <em>(optional)</em></span>
           <textarea name="hairDislikes" rows="2" placeholder="Anything to avoid…">${esc(state.hairDislikes)}</textarea></label>
-        <label class="form-field"><span>Prior hair services (last 12 months)</span>
+        <label class="form-field"><span>Prior hair services (last 12 months) <em>(optional)</em></span>
           <textarea name="priorServices" rows="2" placeholder="Salon, barber, color, extensions…">${esc(state.priorServices)}</textarea></label>
-        <label class="form-field"><span>21+ arrival beverage</span>
+        <label class="form-field"><span>21+ arrival beverage <em>(optional)</em></span>
           <select name="beverage">
+            <option value=""${!state.beverage ? ' selected' : ''}>No preference</option>
             ${beverages.map((b) => `<option value="${esc(b.id)}"${state.beverage === b.id ? ' selected' : ''}>${esc(b.label)}</option>`).join('')}
           </select></label>
         <label class="form-field studio-book-inspo-upload">
-          <span>Inspiration photos</span>
+          <span>Inspiration photos <em>(optional)</em></span>
           <input type="file" id="publicInspoPhotos" accept="image/*" multiple>
-          <small>Up to 6 reference photos.</small>
+          <small>Up to 6 reference photos — add now or bring them to your visit.</small>
         </label>
         ${photos.length ? `<div class="studio-book-inspo-preview">${photos.map((p) => `<img src="${p.dataUrl}" alt="${esc(p.name || 'Inspo')}">`).join('')}</div>` : ''}
       </section>`;
@@ -946,6 +1059,19 @@
         return;
       }
 
+      if (e.target.closest('[data-book-prefs-toggle]')) {
+        state.prefsExpanded = true;
+        render();
+        return;
+      }
+
+      if (e.target.closest('[data-book-prefs-skip]')) {
+        state.prefsExpanded = false;
+        clearBookingPreferences();
+        render();
+        return;
+      }
+
       const svcBtn = e.target.closest('[data-book-service]');
       if (svcBtn) {
         const svc = RS().getService(svcBtn.dataset.bookService);
@@ -1029,10 +1155,14 @@
         state.email = String(fd.get('email') || '').trim();
         state.phone = String(fd.get('phone') || '').trim();
         state.notes = String(fd.get('notes') || '').trim();
-        state.hairLikes = String(fd.get('hairLikes') || '').trim();
-        state.hairDislikes = String(fd.get('hairDislikes') || '').trim();
-        state.priorServices = String(fd.get('priorServices') || '').trim();
-        state.beverage = String(fd.get('beverage') || '').trim();
+        if (state.prefsExpanded) {
+          state.hairLikes = String(fd.get('hairLikes') || '').trim();
+          state.hairDislikes = String(fd.get('hairDislikes') || '').trim();
+          state.priorServices = String(fd.get('priorServices') || '').trim();
+          state.beverage = String(fd.get('beverage') || '').trim();
+        } else {
+          clearBookingPreferences();
+        }
         if (!state.name || !state.email || !state.phone) {
           state.error = 'Please fill in all required fields.';
           render();

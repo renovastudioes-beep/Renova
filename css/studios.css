@@ -3121,6 +3121,59 @@ html.gateway-page-enter.gateway-page-ready .studios-page {
   border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+.studio-book-prefs-collapsed {
+  padding: 14px 0 4px;
+}
+
+.studio-book-prefs-actions {
+  margin-top: 10px;
+}
+
+.studio-book-prefs-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.studio-book-prefs-head h4 {
+  margin: 0;
+}
+
+.studio-book-prefs-skip {
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.studio-book-optional-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.studio-book-service-groups {
+  display: grid;
+  gap: 24px;
+}
+
+.studio-book-service-group-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.studio-book-options-simple {
+  margin-top: 10px;
+}
+
 .studio-book-prefs h4 {
   margin: 0 0 6px;
   font-size: 15px;

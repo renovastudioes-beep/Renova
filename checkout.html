@@ -5,9 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Checkout — ONYX Peptides</title>
   <meta name="robots" content="noindex">
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=70">
 </head>
 <body class="page-body">
+  <div class="ruo-banner" role="note">
+    <strong>Research Use Only (RUO).</strong> Products are for in-vitro laboratory research by qualified personnel — not for human or animal consumption.
+  </div>
   <nav class="global-nav scrolled">
     <div class="nav-content">
       <a href="index.html" class="nav-logo">ONYX</a>
@@ -17,7 +20,7 @@
 
   <main class="page-main checkout-page">
     <h1>Checkout</h1>
-    <p class="page-sub">Review your order and submit for fulfillment. Prices shown include product totals before shipping.</p>
+    <p class="page-sub">Review your order and submit for fulfillment. All products are for in-vitro laboratory research only.</p>
 
     <div id="checkoutEmpty" class="checkout-empty" hidden>
       <p>Your bag is empty.</p>
@@ -28,22 +31,25 @@
       <form class="checkout-form" id="checkoutForm">
         <section class="checkout-section">
           <h2>Research Qualification</h2>
-          <p class="checkout-note">All purchasers must confirm qualified research use.</p>
-          <label class="check-label"><input type="checkbox" id="ruoAck" required> I confirm these products are for <strong>in-vitro laboratory research only</strong>.</label>
-          <label class="check-label"><input type="checkbox" id="ageAck" required> I am 18+ and a qualified researcher or represent a licensed research institution.</label>
+          <p class="checkout-note">All purchasers must attest to qualified research use before order submission.</p>
+          <label class="check-label"><input type="checkbox" id="ruoAck" required> I confirm these products are for <strong>in-vitro laboratory research only</strong> and will not be used for human or animal consumption, diagnosis, treatment, or prevention of any disease.</label>
+          <label class="check-label"><input type="checkbox" id="ageAck" required> I am 18 years of age or older and am a qualified researcher or authorized representative of a licensed research institution.</label>
+          <label class="check-label"><input type="checkbox" id="instAck" required> I attest that products will be used solely for legitimate laboratory research in compliance with applicable federal, state, and local laws.</label>
         </section>
 
         <section class="checkout-section">
           <h2>Contact</h2>
           <label class="form-field"><span>Full Name *</span><input type="text" id="fullName" required></label>
+          <label class="form-field"><span>Institution / Laboratory *</span><input type="text" id="institution" required placeholder="University, CRO, or licensed research facility"></label>
           <label class="form-field"><span>Email *</span><input type="email" id="email" required></label>
           <label class="form-field"><span>Phone</span><input type="tel" id="phone"></label>
         </section>
 
         <section class="checkout-section">
           <h2>Shipping Address</h2>
+          <p class="checkout-note">Ships to qualified researchers and licensed research institutions in the United States. Institutional or laboratory addresses preferred.</p>
           <label class="form-field"><span>Address *</span><input type="text" id="address1" required></label>
-          <label class="form-field"><span>Apt / Suite</span><input type="text" id="address2"></label>
+          <label class="form-field"><span>Apt / Suite / Lab</span><input type="text" id="address2"></label>
           <div class="form-row">
             <label class="form-field"><span>City *</span><input type="text" id="city" required></label>
             <label class="form-field"><span>State *</span><input type="text" id="state" required></label>
@@ -51,16 +57,8 @@
           </div>
         </section>
 
-        <section class="checkout-section">
-          <h2>Add-Ons</h2>
-          <label class="check-label addon-label">
-            <input type="checkbox" id="bacAddon">
-            <span><strong>Bacteriostatic Water 30mL</strong><br><small>Sterile reconstitution solution. Recommended for lyophilized peptides.</small></span>
-          </label>
-        </section>
-
-        <p class="legal-check">By placing your order you agree to our <a href="legal/research-agreement.html">Research Agreement</a>, <a href="legal/terms.html">Terms of Sale</a>, and <a href="legal/privacy.html">Privacy Policy</a>.</p>
-        <button type="submit" class="btn-primary btn-full" id="placeOrderBtn">Place order</button>
+        <p class="legal-check">By placing your order you agree to our <a href="legal/research-agreement.html">Research Agreement</a>, <a href="legal/terms.html">Terms of Sale</a>, and <a href="legal/privacy.html">Privacy Policy</a>. You acknowledge that ONYX Peptides products are Research Use Only (RUO) materials.</p>
+        <button type="submit" class="btn-primary btn-full" id="placeOrderBtn">Place order — research use only</button>
       </form>
 
       <aside class="checkout-summary">
@@ -71,19 +69,20 @@
           <div class="checkout-line"><span>Cold-chain shipping</span><span id="sumShipping">Pending</span></div>
           <p class="shipping-note" id="shippingNote"></p>
           <div class="checkout-line checkout-total"><span>Total</span><span id="sumTotal">$0.00</span></div>
-          <p class="checkout-quote-note">Cold-chain shipping is calculated at checkout. Free shipping on orders over $150.</p>
+          <p class="checkout-quote-note">Cold-chain shipping to qualified research addresses. Free shipping on orders over $150.</p>
         </div>
+        <p class="checkout-ruo-note"><strong>RUO only.</strong> Not for human consumption. Research qualification attestation required.</p>
       </aside>
     </div>
   </main>
 
   <script src="js/config.js"></script>
   <script src="js/storefront.js"></script>
-  <script src="js/products.js"></script>
+  <script src="js/products.js?v=3"></script>
   <script src="js/cart.js"></script>
   <script src="js/pos-data.js"></script>
   <script src="js/admin-data.js"></script>
   <script src="js/analytics.js"></script>
-  <script src="js/checkout.js"></script>
+  <script src="js/checkout.js?v=2"></script>
 </body>
 </html>
