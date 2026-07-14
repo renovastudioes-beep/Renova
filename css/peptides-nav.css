@@ -1,0 +1,247 @@
+/* ONYX Peptides — top bar & mobile menu */
+
+.peptides-page {
+  --ruo-strip-height: 34px;
+  --peptide-header-height: calc(var(--ruo-strip-height) + var(--nav-height));
+}
+
+.peptides-page .ruo-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10002;
+}
+
+.peptides-page .peptide-nav.global-nav {
+  top: var(--ruo-strip-height);
+  z-index: 10001;
+}
+
+.peptides-page .hero {
+  padding-top: calc(var(--peptide-header-height) + 36px);
+}
+
+/* Desktop: logo | centered links | actions */
+.peptide-nav .nav-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  max-width: 1100px;
+}
+
+.peptide-nav .nav-logo {
+  justify-self: start;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.peptide-nav .nav-logo-text {
+  white-space: nowrap;
+}
+
+.peptide-nav .nav-links {
+  justify-self: center;
+  gap: 22px;
+  flex-wrap: nowrap;
+}
+
+.peptide-nav .nav-links a {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.peptide-nav .nav-actions {
+  justify-self: end;
+  gap: 10px;
+}
+
+.peptide-nav .nav-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.peptide-nav .nav-icon-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Menu button — hidden on desktop */
+.peptide-nav .nav-menu-btn {
+  display: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.peptide-nav .nav-menu-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.peptide-nav .nav-menu-bar {
+  display: block;
+  width: 18px;
+  height: 1.5px;
+  background: var(--apple-gray-6);
+  border-radius: 1px;
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+
+.peptide-nav .nav-menu-btn.active .nav-menu-bar:nth-child(1) {
+  transform: translateY(6.5px) rotate(45deg);
+}
+
+.peptide-nav .nav-menu-btn.active .nav-menu-bar:nth-child(2) {
+  opacity: 0;
+}
+
+.peptide-nav .nav-menu-btn.active .nav-menu-bar:nth-child(3) {
+  transform: translateY(-6.5px) rotate(-45deg);
+}
+
+/* Mobile drawer */
+.nav-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10003;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s;
+}
+
+.nav-drawer-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.nav-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10004;
+  width: min(300px, 88vw);
+  background: rgba(251, 251, 253, 0.98);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-left: 1px solid var(--apple-gray-2);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.08);
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+  display: flex;
+  flex-direction: column;
+  padding-top: max(var(--safe-top, 0px), env(safe-area-inset-top, 0px));
+}
+
+.nav-drawer.active {
+  transform: translateX(0);
+}
+
+.nav-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--apple-gray-2);
+  flex-shrink: 0;
+}
+
+.nav-drawer-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.nav-drawer-close {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: var(--apple-gray-1);
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--apple-gray-5);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-drawer-links {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 12px calc(20px + env(safe-area-inset-bottom, 0px));
+  gap: 4px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nav-drawer-links a {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--apple-gray-6);
+  transition: background 0.2s;
+}
+
+.nav-drawer-links a:hover,
+.nav-drawer-links a:focus-visible {
+  background: var(--apple-gray-1);
+}
+
+.nav-drawer-cta {
+  margin-top: 8px;
+  justify-content: center;
+  background: var(--apple-blue) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+.nav-drawer-cta:hover {
+  background: var(--apple-blue-hover) !important;
+}
+
+/* Tablet & mobile — slide-out menu, hide inline links */
+@media (max-width: 900px) {
+  .peptide-nav .nav-content {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .peptide-nav .nav-links {
+    display: none;
+  }
+
+  .peptide-nav .nav-menu-btn {
+    display: inline-flex;
+  }
+
+  .peptide-nav .nav-logo-text {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 390px) {
+  .peptide-nav .nav-logo-text {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
